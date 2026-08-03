@@ -142,7 +142,7 @@ private fun StartMenuTile(
 
         val actions = mutableListOf<ContextMenuAction>()
         if (onUnpin != null) {
-            actions.add(ContextMenuAction(label = "Unpin from Start", icon = Icons.Outlined.PushPin, onClick = onUnpin))
+            actions.add(ContextMenuAction(label = "Unpin from Start", icon = Icons.Filled.PushPin, onClick = onUnpin))
         }
         if (onPinToTaskbar != null) {
             actions.add(ContextMenuAction(label = "Pin to taskbar", icon = Icons.Filled.PushPin, onClick = onPinToTaskbar))
