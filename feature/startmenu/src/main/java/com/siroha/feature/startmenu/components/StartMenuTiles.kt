@@ -14,7 +14,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.PushPinOutlined
+import androidx.compose.material.icons.outlined.PushPin as PushPinOutlined
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -144,7 +144,7 @@ private fun StartMenuTile(
 
         val actions = buildList {
             onUnpin?.let {
-                add(ContextMenuAction(label = "Unpin from Start", icon = Icons.Filled.PushPinOutlined, onClick = it))
+                add(ContextMenuAction(label = "Unpin from Start", icon = PushPinOutlined, onClick = it))
             }
             onPinToTaskbar?.let {
                 add(ContextMenuAction(label = "Pin to taskbar", icon = Icons.Filled.PushPin, onClick = it))
