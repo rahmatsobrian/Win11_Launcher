@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.siroha.feature.startmenu.components
 
 import android.graphics.Bitmap
