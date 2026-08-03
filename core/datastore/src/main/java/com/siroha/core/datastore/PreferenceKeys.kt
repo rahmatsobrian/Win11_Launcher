@@ -6,7 +6,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 
-internal object PreferenceKeys {
+object PreferenceKeys {
     val THEME_MODE = stringPreferencesKey("theme_mode")
     val DYNAMIC_COLOR_ENABLED = booleanPreferencesKey("dynamic_color_enabled")
     val ACCENT_COLOR_ARGB = longPreferencesKey("accent_color_argb")
