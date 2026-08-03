@@ -142,13 +142,12 @@ private fun StartMenuTile(
             )
         }
 
-        val actions = buildList {
-            onUnpin?.let {
-                add(ContextMenuAction(label = "Unpin from Start", icon = PushPinOutlined, onClick = it))
-            }
-            onPinToTaskbar?.let {
-                add(ContextMenuAction(label = "Pin to taskbar", icon = PushPinFilled, onClick = it))
-            }
+        val actions = mutableListOf<ContextMenuAction>()
+        if (onUnpin != null) {
+            actions.add(ContextMenuAction(label = "Unpin from Start", icon = PushPinOutlined, onClick = onUnpin))
+        }
+        if (onPinToTaskbar != null) {
+            actions.add(ContextMenuAction(label = "Pin to taskbar", icon = PushPinFilled, onClick = onPinToTaskbar))
         }
 
         AppContextMenu(
