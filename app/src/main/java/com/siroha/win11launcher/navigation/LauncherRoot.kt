@@ -8,7 +8,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -66,67 +65,65 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
         appLauncher.launch(context, componentKey, coroutineScope)
     }
 
-    Scaffold { _ ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            DesktopScreen(
-                onOpenApp = { componentKey -> openApp(componentKey) },
-                onOpenStartMenu = { overlay = OverlayScreen.START_MENU }
-            )
+    Box(modifier = Modifier.fillMaxSize()) {
+        DesktopScreen(
+            onOpenApp = { componentKey -> openApp(componentKey) },
+            onOpenStartMenu = { overlay = OverlayScreen.START_MENU }
+        )
 
-            TaskbarScreen(
-                onOpenApp = { componentKey -> openApp(componentKey) },
-                onOpenQuickSettings = { overlay = OverlayScreen.QUICK_SETTINGS },
-                onOpenNotificationCenter = { overlay = OverlayScreen.NOTIFICATION_CENTER },
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
+        TaskbarScreen(
+            onOpenApp = { componentKey -> openApp(componentKey) },
+            onOpenQuickSettings = { overlay = OverlayScreen.QUICK_SETTINGS },
+            onOpenNotificationCenter = { overlay = OverlayScreen.NOTIFICATION_CENTER },
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
 
-            StartMenuOverlay(
-                isVisible = overlay == OverlayScreen.START_MENU,
-                onDismiss = { overlay = OverlayScreen.NONE },
-                onOpenApp = { componentKey -> openApp(componentKey) }
-            )
+        StartMenuOverlay(
+            isVisible = overlay == OverlayScreen.START_MENU,
+            onDismiss = { overlay = OverlayScreen.NONE },
+            onOpenApp = { componentKey -> openApp(componentKey) }
+        )
 
-            AnimatedVisibility(
-                visible = overlay == OverlayScreen.APP_DRAWER,
-                enter = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
-                exit = slideOutVertically(tween(180)) { it } + fadeOut(tween(180))
-            ) {
-                AppDrawerScreen(onOpenApp = { componentKey -> openApp(componentKey) })
-            }
+        AnimatedVisibility(
+            visible = overlay == OverlayScreen.APP_DRAWER,
+            enter = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
+            exit = slideOutVertically(tween(180)) { it } + fadeOut(tween(180))
+        ) {
+            AppDrawerScreen(onOpenApp = { componentKey -> openApp(componentKey) })
+        }
 
-            AnimatedVisibility(
-                visible = overlay == OverlayScreen.SETTINGS,
-                enter = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
-                exit = slideOutVertically(tween(180)) { it } + fadeOut(tween(180))
-            ) {
-                SettingsScreen(
-                    onNavigateToAbout = { /* pushed as a nested overlay by feature:settings' own state */ },
-                    onNavigateToDeveloperOptions = { /* same */ }
-                )
-            }
-
-            QuickSettingsOverlay(
-                isVisible = overlay == OverlayScreen.QUICK_SETTINGS,
-                isWifiConnected = systemStatus.isWifiConnected,
-                isBluetoothEnabled = systemStatus.isBluetoothEnabled,
-                brightnessPercent = brightnessPercent,
-                onBrightnessChange = { percent ->
-                    brightnessPercent = percent
-                    if (SystemControlHelper.canWriteSettings(context)) {
-                        SystemControlHelper.setBrightnessPercent(context, percent)
-                    } else {
-                        SystemControlHelper.requestWriteSettingsPermission(context)
-                    }
-                },
-                onOpenWifiPanel = { SystemControlHelper.openWifiPanel(context) },
-                onOpenBluetoothPanel = { SystemControlHelper.openBluetoothSettings(context) },
-                onDismiss = { overlay = OverlayScreen.NONE }
-            )
-
-            NotificationCenterOverlay(
-                isVisible = overlay == OverlayScreen.NOTIFICATION_CENTER,
-                onDismiss = { overlay = OverlayScreen.NONE }
+        AnimatedVisibility(
+            visible = overlay == OverlayScreen.SETTINGS,
+            enter = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
+            exit = slideOutVertically(tween(180)) { it } + fadeOut(tween(180))
+        ) {
+            SettingsScreen(
+                onNavigateToAbout = { /* pushed as a nested overlay by feature:settings' own state */ },
+                onNavigateToDeveloperOptions = { /* same */ }
             )
         }
+
+        QuickSettingsOverlay(
+            isVisible = overlay == OverlayScreen.QUICK_SETTINGS,
+            isWifiConnected = systemStatus.isWifiConnected,
+            isBluetoothEnabled = systemStatus.isBluetoothEnabled,
+            brightnessPercent = brightnessPercent,
+            onBrightnessChange = { percent ->
+                brightnessPercent = percent
+                if (SystemControlHelper.canWriteSettings(context)) {
+                    SystemControlHelper.setBrightnessPercent(context, percent)
+                } else {
+                    SystemControlHelper.requestWriteSettingsPermission(context)
+                }
+            },
+            onOpenWifiPanel = { SystemControlHelper.openWifiPanel(context) },
+            onOpenBluetoothPanel = { SystemControlHelper.openBluetoothSettings(context) },
+            onDismiss = { overlay = OverlayScreen.NONE }
+        )
+
+        NotificationCenterOverlay(
+            isVisible = overlay == OverlayScreen.NOTIFICATION_CENTER,
+            onDismiss = { overlay = OverlayScreen.NONE }
+        )
     }
 }
