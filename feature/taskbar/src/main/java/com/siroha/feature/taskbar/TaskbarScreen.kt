@@ -1,6 +1,7 @@
 package com.siroha.feature.taskbar
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -36,6 +37,8 @@ import com.siroha.feature.taskbar.components.SystemTray
 
 @Composable
 fun TaskbarScreen(
+    isStartMenuOpen: Boolean,
+    onToggleStartMenu: () -> Unit,
     onOpenApp: (String) -> Unit,
     onOpenQuickSettings: () -> Unit,
     onOpenNotificationCenter: () -> Unit,
@@ -54,9 +57,15 @@ fun TaskbarScreen(
             .padding(horizontal = 8.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(state.cornerRadiusDp.dp))
             .background(tokens.taskbarChrome)
+            .border(
+                width = 0.5.dp,
+                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.08f),
+                shape = RoundedCornerShape(state.cornerRadiusDp.dp)
+            )
     ) {
         Row(
             modifier = Modifier
+                .fillMaxWidth()
                 .fillMaxHeight()
                 .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -67,8 +76,8 @@ fun TaskbarScreen(
             }
         ) {
             StartButton(
-                isActive = state.isStartMenuOpen,
-                onClick = { viewModel.toggleStartMenu() }
+                isActive = isStartMenuOpen,
+                onClick = onToggleStartMenu
             )
 
             Box(modifier = Modifier.padding(start = 8.dp)) {

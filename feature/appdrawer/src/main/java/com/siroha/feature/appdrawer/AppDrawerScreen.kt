@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -19,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -31,6 +34,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun AppDrawerScreen(
     onOpenApp: (String) -> Unit,
+    onDismiss: () -> Unit = {},
     viewModel: AppDrawerViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -42,21 +46,29 @@ fun AppDrawerScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        OutlinedTextField(
-            value = state.searchQuery,
-            onValueChange = viewModel::onSearchQueryChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            placeholder = { Text("Search apps") },
-            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                focusedContainerColor = MaterialTheme.colorScheme.surface
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = state.searchQuery,
+                onValueChange = viewModel::onSearchQueryChange,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                placeholder = { Text("Search apps") },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface
+                )
             )
-        )
+            IconButton(onClick = onDismiss, modifier = Modifier.padding(end = 8.dp)) {
+                Icon(Icons.Filled.Close, contentDescription = "Close app drawer")
+            }
+        }
 
         if (state.isSearching) {
             AppDrawerSearchResults(
@@ -74,6 +86,7 @@ fun AppDrawerScreen(
                     onHide = { app -> viewModel.hideApp(app.componentKey) },
                     onPinToTaskbar = { app -> viewModel.pinToTaskbar(app.componentKey) },
                     onPinToStart = { app -> viewModel.pinToStart(app.componentKey) },
+                    onAddToHome = { app -> viewModel.addToHomeScreen(app.componentKey) },
                     listState = listState,
                     modifier = Modifier.weight(1f)
                 )

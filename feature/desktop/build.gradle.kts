@@ -35,6 +35,7 @@ dependencies {
     implementation(project(":feature:widgets"))
 
     implementation(libs.core.ktx)
+    implementation(libs.activity.compose)
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.lifecycle.runtime.compose)
     implementation(platform(libs.compose.bom))

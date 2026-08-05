@@ -1,5 +1,9 @@
 package com.siroha.feature.desktop
 
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProviderInfo
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
@@ -45,6 +49,22 @@ fun DesktopScreen(
     val context = LocalContext.current
     var contextMenuItem by remember { mutableStateOf<DesktopItem?>(null) }
     var isWidgetPickerVisible by remember { mutableStateOf(false) }
+    var pendingWidget by remember { mutableStateOf<Pair<Int, AppWidgetProviderInfo>?>(null) }
+
+    // Allocating an appWidgetId does not by itself grant this app
+    // permission to bind that widget — AppWidgetManager requires either
+    // bindAppWidgetIdIfAllowed() to succeed silently, or (if it returns
+    // false) an explicit user confirmation via ACTION_APPWIDGET_BIND. This
+    // launcher handles that second, user-facing path.
+    val bindWidgetLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val widget = pendingWidget
+        pendingWidget = null
+        if (result.resultCode == android.app.Activity.RESULT_OK && widget != null) {
+            completeWidgetPlacement(viewModel, widget.first, widget.second, state)
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -121,17 +141,45 @@ fun DesktopScreen(
             onDismiss = { isWidgetPickerVisible = false },
             onWidgetSelected = { appWidgetId, providerInfo ->
                 isWidgetPickerVisible = false
-                val spanColumns = (providerInfo.minWidth / 100).coerceIn(1, state.gridColumns)
-                val spanRows = (providerInfo.minHeight / 100).coerceIn(1, state.gridRows)
-                viewModel.addWidget(
-                    appWidgetId = appWidgetId,
-                    spanColumns = spanColumns,
-                    spanRows = spanRows,
-                    position = GridPosition(page = state.currentPage, row = 0, column = 0)
+
+                val appWidgetManager = AppWidgetManager.getInstance(context)
+                val alreadyBound = appWidgetManager.bindAppWidgetIdIfAllowed(
+                    appWidgetId,
+                    providerInfo.provider
                 )
+
+                if (alreadyBound) {
+                    completeWidgetPlacement(viewModel, appWidgetId, providerInfo, state)
+                } else {
+                    // The system requires explicit user confirmation for this
+                    // provider — launch the system bind dialog and finish
+                    // placement only if the user approves it.
+                    pendingWidget = appWidgetId to providerInfo
+                    val bindIntent = android.content.Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, providerInfo.provider)
+                    }
+                    bindWidgetLauncher.launch(bindIntent)
+                }
             }
         )
     }
+}
+
+private fun completeWidgetPlacement(
+    viewModel: DesktopViewModel,
+    appWidgetId: Int,
+    providerInfo: AppWidgetProviderInfo,
+    state: DesktopUiState
+) {
+    val spanColumns = (providerInfo.minWidth / 100).coerceIn(1, state.gridColumns)
+    val spanRows = (providerInfo.minHeight / 100).coerceIn(1, state.gridRows)
+    viewModel.addWidget(
+        appWidgetId = appWidgetId,
+        spanColumns = spanColumns,
+        spanRows = spanRows,
+        position = GridPosition(page = state.currentPage, row = 0, column = 0)
+    )
 }
 
 private fun buildDesktopContextActions(

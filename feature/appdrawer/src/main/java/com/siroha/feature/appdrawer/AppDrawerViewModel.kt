@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.siroha.core.domain.model.AppInfo
 import com.siroha.core.domain.repository.IconRepository
 import com.siroha.core.domain.repository.InstalledAppsRepository
+import com.siroha.core.domain.usecase.AddAppToDesktopUseCase
 import com.siroha.core.domain.usecase.SearchLauncherUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
@@ -26,6 +27,7 @@ import javax.inject.Inject
 class AppDrawerViewModel @Inject constructor(
     private val installedAppsRepository: InstalledAppsRepository,
     private val searchLauncherUseCase: SearchLauncherUseCase,
+    private val addAppToDesktopUseCase: AddAppToDesktopUseCase,
     private val iconRepository: IconRepository
 ) : ViewModel() {
 
@@ -119,6 +121,12 @@ class AppDrawerViewModel @Inject constructor(
     fun pinToStart(componentKey: String) {
         viewModelScope.launch {
             installedAppsRepository.setPinnedToStart(componentKey, true)
+        }
+    }
+
+    fun addToHomeScreen(componentKey: String) {
+        viewModelScope.launch {
+            addAppToDesktopUseCase(componentKey)
         }
     }
 

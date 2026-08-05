@@ -21,6 +21,5 @@ data class TaskbarUiState(
     val isWifiConnected: Boolean = true,
     val isBluetoothEnabled: Boolean = false,
     val notificationCount: Int = 0,
-    val isStartMenuOpen: Boolean = false,
     val iconBitmaps: Map<String, Bitmap> = emptyMap()
 )

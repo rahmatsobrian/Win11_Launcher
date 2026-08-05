@@ -15,7 +15,8 @@ fun NavGraphBuilder.appDrawerScreen(navController: NavController) {
                     ?.savedStateHandle
                     ?.set("launch_component_key", componentKey)
                 navController.popBackStack()
-            }
+            },
+            onDismiss = { navController.popBackStack() }
         )
     }
 }

@@ -29,7 +29,6 @@ class TaskbarViewModel @Inject constructor(
     private val iconRepository: IconRepository
 ) : ViewModel() {
 
-    private val isStartMenuOpen = MutableStateFlow(false)
     private val iconBitmaps = MutableStateFlow<Map<String, Bitmap>>(emptyMap())
 
     // Step 1: apps-related data (all apps needed to resolve running
@@ -62,9 +61,8 @@ class TaskbarViewModel @Inject constructor(
     val uiState: StateFlow<TaskbarUiState> = combine(
         appsPartial,
         chromePartial,
-        isStartMenuOpen,
         iconBitmaps
-    ) { apps, chrome, startMenuOpen, icons ->
+    ) { apps, chrome, icons ->
         val runningApps = apps.allApps.filter { it.packageName in apps.runningPackageNames }
         loadMissingIcons(apps.pinnedApps + runningApps)
 
@@ -85,7 +83,6 @@ class TaskbarViewModel @Inject constructor(
             isWifiConnected = chrome.status.isWifiConnected,
             isBluetoothEnabled = chrome.status.isBluetoothEnabled,
             notificationCount = chrome.status.notificationCount,
-            isStartMenuOpen = startMenuOpen,
             iconBitmaps = icons
         )
     }.stateIn(
@@ -106,14 +103,6 @@ class TaskbarViewModel @Inject constructor(
                 }
             }
         }
-    }
-
-    fun toggleStartMenu() {
-        isStartMenuOpen.update { !it }
-    }
-
-    fun closeStartMenu() {
-        isStartMenuOpen.value = false
     }
 
     fun unpinFromTaskbar(componentKey: String) {

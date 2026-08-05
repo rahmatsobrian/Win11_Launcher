@@ -15,11 +15,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val SEED_APP_COUNT = 12
+private const val SEED_GRID_COLUMNS = 5
 
 @HiltViewModel
 class DesktopViewModel @Inject constructor(
@@ -33,6 +37,42 @@ class DesktopViewModel @Inject constructor(
     private val currentPage = MutableStateFlow(0)
     private val isEditMode = MutableStateFlow(false)
     private val iconBitmaps = MutableStateFlow<Map<String, Bitmap>>(emptyMap())
+
+    init {
+        seedDesktopIfEmpty()
+    }
+
+    /**
+     * A brand-new install has an empty Room table for desktop_items, which
+     * would otherwise render as a blank screen with no indication anything
+     * is wrong — there's no visible affordance yet pointing the user to
+     * "open the app drawer and long-press to add icons". Seeding a handful
+     * of already-installed apps on first run gives the user something to
+     * interact with immediately, matching how stock launchers ship with a
+     * pre-populated home screen out of the box.
+     */
+    private fun seedDesktopIfEmpty() {
+        viewModelScope.launch {
+            val existingItems = desktopRepository.observeDesktopItems(0).first()
+            if (existingItems.isNotEmpty()) return@launch
+
+            val installedApps = installedAppsRepository.observeInstalledApps().first()
+            val seedApps = installedApps
+                .filterNot { it.isSystemApp }
+                .ifEmpty { installedApps }
+                .take(SEED_APP_COUNT)
+
+            seedApps.forEachIndexed { index, app ->
+                desktopRepository.addItem(
+                    DesktopItem.AppShortcut(
+                        id = java.util.UUID.randomUUID().toString(),
+                        position = GridPosition(page = 0, row = index / SEED_GRID_COLUMNS, column = index % SEED_GRID_COLUMNS),
+                        appComponentKey = app.componentKey
+                    )
+                )
+            }
+        }
+    }
 
     val uiState: StateFlow<DesktopUiState> = combine(
         currentPage,

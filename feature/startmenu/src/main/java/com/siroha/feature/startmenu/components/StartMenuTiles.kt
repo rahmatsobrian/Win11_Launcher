@@ -38,15 +38,18 @@ fun PinnedAppsGrid(
     onAppClick: (AppInfo) -> Unit,
     onUnpin: (AppInfo) -> Unit,
     onPinToTaskbar: (AppInfo) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showHeader: Boolean = true
 ) {
     Column(modifier = modifier.padding(horizontal = 24.dp)) {
-        Text(
-            text = "Pinned",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        if (showHeader) {
+            Text(
+                text = "Pinned",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
         LazyVerticalGrid(
             columns = GridCells.Fixed(6),
             horizontalArrangement = Arrangement.spacedBy(4.dp),

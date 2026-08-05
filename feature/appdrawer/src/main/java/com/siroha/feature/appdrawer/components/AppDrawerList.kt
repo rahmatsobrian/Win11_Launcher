@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -42,6 +43,7 @@ fun AppDrawerList(
     onHide: (AppInfo) -> Unit,
     onPinToTaskbar: (AppInfo) -> Unit,
     onPinToStart: (AppInfo) -> Unit,
+    onAddToHome: (AppInfo) -> Unit,
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState()
 ) {
@@ -68,7 +70,8 @@ fun AppDrawerList(
                     onClick = { onAppClick(app) },
                     onHide = { onHide(app) },
                     onPinToTaskbar = { onPinToTaskbar(app) },
-                    onPinToStart = { onPinToStart(app) }
+                    onPinToStart = { onPinToStart(app) },
+                    onAddToHome = { onAddToHome(app) }
                 )
             }
         }
@@ -82,7 +85,8 @@ private fun AppDrawerRow(
     onClick: () -> Unit,
     onHide: () -> Unit,
     onPinToTaskbar: () -> Unit,
-    onPinToStart: () -> Unit
+    onPinToStart: () -> Unit,
+    onAddToHome: () -> Unit
 ) {
     val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
@@ -108,6 +112,11 @@ private fun AppDrawerRow(
             expanded = showMenu,
             onDismiss = { showMenu = false },
             actions = listOf(
+                ContextMenuAction(
+                    label = "Add to Home screen",
+                    icon = Icons.Filled.Add,
+                    onClick = onAddToHome
+                ),
                 ContextMenuAction(
                     label = "Pin to Start",
                     icon = Icons.Filled.PushPin,

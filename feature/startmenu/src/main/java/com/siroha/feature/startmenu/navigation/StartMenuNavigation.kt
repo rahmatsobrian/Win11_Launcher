@@ -22,7 +22,8 @@ fun NavGraphBuilder.startMenuScreen(navController: NavController) {
                     ?.savedStateHandle
                     ?.set("launch_component_key", componentKey)
                 navController.popBackStack()
-            }
+            },
+            onOpenAllApps = { navController.navigate("app_drawer") }
         )
     }
 }

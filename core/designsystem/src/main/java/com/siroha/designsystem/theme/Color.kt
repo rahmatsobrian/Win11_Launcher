@@ -17,9 +17,12 @@ val AccentBlue = Color(0xFF0078D4)
 val AccentBlueLight = Color(0xFF60CDFF)
 val AccentBlueDark = Color(0xFF003966)
 
-// Taskbar / Start menu chrome
-val TaskbarLight = Color(0xE6F3F3F3)
-val TaskbarDark = Color(0xE6202020)
+// Taskbar / Start menu chrome — deliberately lighter/darker than the
+// desktop background (MicaDarkBase/MicaLightBase) rather than the same
+// hue at different alpha, so the taskbar reads as a distinct surface
+// instead of visually merging into the desktop behind it.
+val TaskbarLight = Color(0xF2FFFFFF)
+val TaskbarDark = Color(0xF23A3A3A)
 
 val OnMicaLight = Color(0xFF1B1B1B)
 val OnMicaDark = Color(0xFFE6E6E6)

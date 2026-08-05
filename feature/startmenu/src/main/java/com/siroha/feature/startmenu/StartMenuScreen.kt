@@ -10,11 +10,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,6 +41,7 @@ fun StartMenuOverlay(
     isVisible: Boolean,
     onDismiss: () -> Unit,
     onOpenApp: (String) -> Unit,
+    onOpenAllApps: () -> Unit,
     viewModel: StartMenuViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -72,7 +78,8 @@ fun StartMenuOverlay(
                         onQueryChange = viewModel::onSearchQueryChange,
                         onAppClick = { app -> onOpenApp(app.componentKey) },
                         onUnpin = { app -> viewModel.unpinFromStart(app.componentKey) },
-                        onPinToTaskbar = { app -> viewModel.pinToTaskbar(app.componentKey) }
+                        onPinToTaskbar = { app -> viewModel.pinToTaskbar(app.componentKey) },
+                        onOpenAllApps = onOpenAllApps
                     )
                 }
             }
@@ -86,7 +93,8 @@ private fun StartMenuContent(
     onQueryChange: (String) -> Unit,
     onAppClick: (AppInfo) -> Unit,
     onUnpin: (AppInfo) -> Unit,
-    onPinToTaskbar: (AppInfo) -> Unit
+    onPinToTaskbar: (AppInfo) -> Unit,
+    onOpenAllApps: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         StartMenuSearchBar(query = state.searchQuery, onQueryChange = onQueryChange)
@@ -99,12 +107,25 @@ private fun StartMenuContent(
                 modifier = Modifier.fillMaxSize()
             )
         } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 4.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "Pinned", style = MaterialTheme.typography.titleMedium)
+                TextButton(onClick = onOpenAllApps) {
+                    Text("All apps")
+                }
+            }
             PinnedAppsGrid(
                 apps = state.pinnedApps,
                 iconBitmaps = state.iconBitmaps,
                 onAppClick = onAppClick,
                 onUnpin = onUnpin,
-                onPinToTaskbar = onPinToTaskbar
+                onPinToTaskbar = onPinToTaskbar,
+                showHeader = false
             )
             if (state.showRecommended) {
                 RecommendedAppsSection(

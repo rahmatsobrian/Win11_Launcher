@@ -1,5 +1,6 @@
 package com.siroha.win11launcher.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -65,6 +66,14 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
         appLauncher.launch(context, componentKey, coroutineScope)
     }
 
+    // Only intercept back presses while an overlay is showing — with no
+    // overlay open, back should fall through to the system default (which
+    // for a HOME activity is a no-op, correctly keeping the user on the
+    // desktop rather than this composable trying to "close" the launcher).
+    BackHandler(enabled = overlay != OverlayScreen.NONE) {
+        overlay = OverlayScreen.NONE
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         DesktopScreen(
             onOpenApp = { componentKey -> openApp(componentKey) },
@@ -72,6 +81,10 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
         )
 
         TaskbarScreen(
+            isStartMenuOpen = overlay == OverlayScreen.START_MENU,
+            onToggleStartMenu = {
+                overlay = if (overlay == OverlayScreen.START_MENU) OverlayScreen.NONE else OverlayScreen.START_MENU
+            },
             onOpenApp = { componentKey -> openApp(componentKey) },
             onOpenQuickSettings = { overlay = OverlayScreen.QUICK_SETTINGS },
             onOpenNotificationCenter = { overlay = OverlayScreen.NOTIFICATION_CENTER },
@@ -81,7 +94,8 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
         StartMenuOverlay(
             isVisible = overlay == OverlayScreen.START_MENU,
             onDismiss = { overlay = OverlayScreen.NONE },
-            onOpenApp = { componentKey -> openApp(componentKey) }
+            onOpenApp = { componentKey -> openApp(componentKey) },
+            onOpenAllApps = { overlay = OverlayScreen.APP_DRAWER }
         )
 
         AnimatedVisibility(
@@ -89,7 +103,10 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
             enter = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
             exit = slideOutVertically(tween(180)) { it } + fadeOut(tween(180))
         ) {
-            AppDrawerScreen(onOpenApp = { componentKey -> openApp(componentKey) })
+            AppDrawerScreen(
+                onOpenApp = { componentKey -> openApp(componentKey) },
+                onDismiss = { overlay = OverlayScreen.NONE }
+            )
         }
 
         AnimatedVisibility(
