@@ -11,6 +11,8 @@ import com.siroha.feature.taskbar.system.RunningAppsProvider
 import com.siroha.feature.taskbar.system.SystemStatus
 import com.siroha.feature.taskbar.system.SystemStatusProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -96,11 +98,15 @@ class TaskbarViewModel @Inject constructor(
         if (missing.isEmpty()) return
 
         viewModelScope.launch {
-            missing.forEach { app ->
-                val bitmap = iconRepository.getIcon(app.componentKey, app.packageName, app.activityClassName)
-                if (bitmap != null) {
-                    iconBitmaps.update { it + (app.componentKey to bitmap) }
-                }
+            kotlinx.coroutines.coroutineScope {
+                missing.map { app ->
+                    async {
+                        val bitmap = iconRepository.getIcon(app.componentKey, app.packageName, app.activityClassName)
+                        if (bitmap != null) {
+                            iconBitmaps.update { it + (app.componentKey to bitmap) }
+                        }
+                    }
+                }.awaitAll()
             }
         }
     }

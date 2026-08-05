@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -38,9 +39,15 @@ class IconRepositoryImpl @Inject constructor(
         return maxMemoryKb / 8 // use up to 1/8th of available heap for icons
     }
 
-    // Prevents two concurrent callers for the same never-cached icon from
-    // both decoding it (wasted work + potential double allocation spike).
-    private val loadMutex = Mutex()
+    // One mutex per componentKey rather than a single global lock — a
+    // global lock serializes icon decoding across every app in the list,
+    // which turns App Drawer's initial load (50-100+ apps) into a slow
+    // one-at-a-time queue. Per-key locking still prevents duplicate work
+    // for the *same* app while letting different apps decode concurrently.
+    private val loadMutexes = ConcurrentHashMap<String, Mutex>()
+
+    private fun mutexFor(componentKey: String): Mutex =
+        loadMutexes.computeIfAbsent(componentKey) { Mutex() }
 
     override suspend fun getIcon(
         componentKey: String,
@@ -49,7 +56,7 @@ class IconRepositoryImpl @Inject constructor(
     ): Bitmap? = withContext(ioDispatcher) {
         cache.get(componentKey)?.let { return@withContext it }
 
-        loadMutex.withLock {
+        mutexFor(componentKey).withLock {
             // Re-check after acquiring the lock in case another coroutine
             // finished loading it while this one was waiting.
             cache.get(componentKey)?.let { return@withLock it }
@@ -63,6 +70,11 @@ class IconRepositoryImpl @Inject constructor(
             val bitmap = drawable.toBitmap()
             cache.put(componentKey, bitmap)
             bitmap
+        }.also {
+            // The per-key mutex has served its purpose once loaded; drop it
+            // so loadMutexes doesn't grow unbounded across a long session
+            // with many different apps opened/hidden/reinstalled over time.
+            loadMutexes.remove(componentKey)
         }
     }
 

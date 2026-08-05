@@ -39,7 +39,7 @@
             android:launchMode="singleTask"
             android:resizeableActivity="true"
             android:stateNotNeeded="true"
-            android:screenOrientation="unspecified"
+            android:screenOrientation="fullSensor"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|uiMode"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.Win11Launcher.Launcher">

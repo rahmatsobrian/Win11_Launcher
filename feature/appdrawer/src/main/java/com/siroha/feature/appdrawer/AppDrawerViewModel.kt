@@ -10,6 +10,8 @@ import com.siroha.core.domain.usecase.AddAppToDesktopUseCase
 import com.siroha.core.domain.usecase.SearchLauncherUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -89,11 +91,19 @@ class AppDrawerViewModel @Inject constructor(
         if (missing.isEmpty()) return
 
         viewModelScope.launch {
-            missing.forEach { app ->
-                val bitmap = iconRepository.getIcon(app.componentKey, app.packageName, app.activityClassName)
-                if (bitmap != null) {
-                    iconBitmaps.update { it + (app.componentKey to bitmap) }
-                }
+            // Loaded concurrently rather than one-by-one — App Drawer can
+            // have 50-100+ apps, and awaiting each icon sequentially before
+            // starting the next would make the whole list stay on
+            // placeholders far longer than necessary.
+            kotlinx.coroutines.coroutineScope {
+                missing.map { app ->
+                    async {
+                        val bitmap = iconRepository.getIcon(app.componentKey, app.packageName, app.activityClassName)
+                        if (bitmap != null) {
+                            iconBitmaps.update { it + (app.componentKey to bitmap) }
+                        }
+                    }
+                }.awaitAll()
             }
         }
     }

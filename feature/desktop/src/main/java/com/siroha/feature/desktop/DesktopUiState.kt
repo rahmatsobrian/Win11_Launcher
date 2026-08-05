@@ -14,5 +14,6 @@ data class DesktopUiState(
     val iconSizeDp: Int = 56,
     val showLabels: Boolean = true,
     val isLoading: Boolean = true,
-    val iconBitmaps: Map<String, Bitmap> = emptyMap()
+    val iconBitmaps: Map<String, Bitmap> = emptyMap(),
+    val appLabels: Map<String, String> = emptyMap()
 )

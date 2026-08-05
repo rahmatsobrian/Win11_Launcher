@@ -44,6 +44,7 @@ fun DesktopGrid(
     iconSizeDp: Int,
     showLabels: Boolean,
     iconBitmaps: Map<String, Bitmap>,
+    appLabels: Map<String, String>,
     isLayoutLocked: Boolean,
     widgetHost: LauncherWidgetHost?,
     onItemClick: (DesktopItem) -> Unit,
@@ -93,6 +94,7 @@ fun DesktopGrid(
 
             val dragModifier = Modifier
                 .offset(x = xOffset, y = yOffset)
+                .size(width = cellWidthDp, height = cellHeightDp)
                 .alpha(if (isDragging) 0.75f else 1f)
                 .let { base ->
                     if (isLayoutLocked) {
@@ -138,7 +140,7 @@ fun DesktopGrid(
             when (item) {
                 is DesktopItem.AppShortcut -> {
                     DesktopIcon(
-                        label = item.customLabel ?: item.appComponentKey.substringBefore("/"),
+                        label = item.customLabel ?: appLabels[item.appComponentKey] ?: item.appComponentKey.substringBefore("/").substringAfterLast('.'),
                         showLabel = showLabels,
                         iconSizeDp = iconSizeDp,
                         bitmap = iconBitmaps[item.appComponentKey],

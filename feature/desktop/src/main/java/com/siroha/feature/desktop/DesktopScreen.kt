@@ -95,6 +95,7 @@ fun DesktopScreen(
             iconSizeDp = state.iconSizeDp,
             showLabels = state.showLabels,
             iconBitmaps = state.iconBitmaps,
+            appLabels = state.appLabels,
             isLayoutLocked = state.isLayoutLocked,
             widgetHost = viewModel.widgetHost,
             onItemClick = { item -> handleItemClick(item, onOpenApp) },

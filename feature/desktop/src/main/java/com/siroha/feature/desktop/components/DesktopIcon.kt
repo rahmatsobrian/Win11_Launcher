@@ -3,6 +3,7 @@ package com.siroha.feature.desktop.components
 import android.graphics.Bitmap
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,7 +37,8 @@ fun DesktopIcon(
     Column(
         modifier = modifier
             .clickable(onClick = onClick)
-            .padding(4.dp),
+            .padding(4.dp)
+            .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         AppIcon(

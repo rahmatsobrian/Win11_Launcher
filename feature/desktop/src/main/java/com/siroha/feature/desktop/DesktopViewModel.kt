@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -37,6 +38,7 @@ class DesktopViewModel @Inject constructor(
     private val currentPage = MutableStateFlow(0)
     private val isEditMode = MutableStateFlow(false)
     private val iconBitmaps = MutableStateFlow<Map<String, Bitmap>>(emptyMap())
+    private val appLabels = MutableStateFlow<Map<String, String>>(emptyMap())
 
     init {
         seedDesktopIfEmpty()
@@ -83,7 +85,9 @@ class DesktopViewModel @Inject constructor(
     ) { page, items, pageCount, settings, editMode ->
         DesktopPartialState(page, items, pageCount, settings, editMode)
     }.combine(iconBitmaps) { partial, icons ->
-        loadMissingIcons(partial.items)
+        partial to icons
+    }.combine(appLabels) { (partial, icons), labels ->
+        loadMissingIconsAndLabels(partial.items)
 
         DesktopUiState(
             currentPage = partial.page,
@@ -96,7 +100,8 @@ class DesktopViewModel @Inject constructor(
             iconSizeDp = partial.settings.desktop.iconSizeDp,
             showLabels = partial.settings.desktop.showLabels,
             isLoading = false,
-            iconBitmaps = icons
+            iconBitmaps = icons,
+            appLabels = labels
         )
     }.stateIn(
         scope = viewModelScope,
@@ -112,18 +117,31 @@ class DesktopViewModel @Inject constructor(
         val editMode: Boolean
     )
 
-    private fun loadMissingIcons(items: List<DesktopItem>) {
+    private fun loadMissingIconsAndLabels(items: List<DesktopItem>) {
         val shortcutKeys = items.filterIsInstance<DesktopItem.AppShortcut>().map { it.appComponentKey }
-        val missing = shortcutKeys.filter { it !in iconBitmaps.value }
-        if (missing.isEmpty()) return
+        val missingIcons = shortcutKeys.filter { it !in iconBitmaps.value }
+        val missingLabels = shortcutKeys.filter { it !in appLabels.value }
+        if (missingIcons.isEmpty() && missingLabels.isEmpty()) return
 
         viewModelScope.launch {
-            missing.forEach { componentKey ->
-                val app = installedAppsRepository.getApp(componentKey) ?: return@forEach
-                val bitmap = iconRepository.getIcon(componentKey, app.packageName, app.activityClassName)
-                if (bitmap != null) {
-                    iconBitmaps.update { it + (componentKey to bitmap) }
-                }
+            val keysToResolve = (missingIcons + missingLabels).distinct()
+            kotlinx.coroutines.coroutineScope {
+                keysToResolve.map { componentKey ->
+                    async {
+                        val app = installedAppsRepository.getApp(componentKey) ?: return@async
+
+                        if (componentKey in missingLabels) {
+                            appLabels.update { it + (componentKey to app.label) }
+                        }
+
+                        if (componentKey in missingIcons) {
+                            val bitmap = iconRepository.getIcon(componentKey, app.packageName, app.activityClassName)
+                            if (bitmap != null) {
+                                iconBitmaps.update { it + (componentKey to bitmap) }
+                            }
+                        }
+                    }
+                }.awaitAll()
             }
         }
     }

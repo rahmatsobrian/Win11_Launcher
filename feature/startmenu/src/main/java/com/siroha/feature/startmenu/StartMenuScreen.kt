@@ -9,6 +9,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -52,13 +53,23 @@ fun StartMenuOverlay(
         enter = fadeIn(tween(150)),
         exit = fadeOut(tween(150))
     ) {
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.25f))
                 .clickable(onClick = onDismiss),
             contentAlignment = Alignment.BottomCenter
         ) {
+            // Reserve room for the taskbar (60dp) and a small margin so the
+            // menu never overflows past the visible screen — critical in
+            // landscape, where available height can be far smaller than
+            // the 720dp portrait default from StartMenuSettings.
+            val reservedBottomDp = 60.dp
+            val maxAvailableWidth = maxWidth - 16.dp
+            val maxAvailableHeight = maxHeight - reservedBottomDp - 16.dp
+            val effectiveWidth = state.widthDp.dp.coerceAtMost(maxAvailableWidth)
+            val effectiveHeight = state.heightDp.dp.coerceAtMost(maxAvailableHeight)
+
             AnimatedVisibility(
                 visible = isVisible,
                 enter = scaleIn(tween(200), initialScale = 0.92f) + fadeIn(tween(200)),
@@ -66,9 +77,9 @@ fun StartMenuOverlay(
             ) {
                 Box(
                     modifier = Modifier
-                        .padding(bottom = 60.dp)
-                        .width(state.widthDp.dp)
-                        .height(state.heightDp.dp)
+                        .padding(bottom = reservedBottomDp)
+                        .width(effectiveWidth)
+                        .height(effectiveHeight)
                         .clip(RoundedCornerShape(12.dp))
                         .background(tokens.taskbarChrome)
                         .clickable(enabled = false) {} // absorb clicks so they don't dismiss via the scrim behind
