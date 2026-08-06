@@ -20,9 +20,10 @@ val AccentBlueDark = Color(0xFF003966)
 // Taskbar / Start menu chrome — deliberately lighter/darker than the
 // desktop background (MicaDarkBase/MicaLightBase) rather than the same
 // hue at different alpha, so the taskbar reads as a distinct surface
-// instead of visually merging into the desktop behind it.
-val TaskbarLight = Color(0xF2FFFFFF)
-val TaskbarDark = Color(0xF23A3A3A)
+// instead of visually merging into the desktop behind it. Tuned to match
+// the real Windows 11 taskbar's solid dark-gray acrylic chrome.
+val TaskbarLight = Color(0xF5F3F3F3)
+val TaskbarDark = Color(0xF52C2C2C)
 
 val OnMicaLight = Color(0xFF1B1B1B)
 val OnMicaDark = Color(0xFFE6E6E6)

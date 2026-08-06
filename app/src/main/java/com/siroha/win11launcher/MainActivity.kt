@@ -3,10 +3,12 @@ package com.siroha.win11launcher
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.siroha.core.domain.repository.InstalledAppsRepository
 import com.siroha.designsystem.theme.Win11LauncherTheme
@@ -42,7 +44,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        applyImmersiveFullscreen()
         lifecycle.addObserver(launcherWidgetHost)
 
         // The installed-apps table is otherwise only refreshed by
@@ -63,6 +65,38 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // Re-hide system bars whenever the window regains focus (e.g. after
+        // returning from an app the user launched, or dismissing a system
+        // dialog) — without this, the status/navigation bars the user
+        // swiped in to peek at stay visible indefinitely once this Activity
+        // is back in the foreground.
+        if (hasFocus) {
+            applyImmersiveFullscreen()
+        }
+    }
+
+    /**
+     * Hides both the status bar and navigation bar behind swipe-in gesture
+     * (BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE) rather than a hard kiosk
+     * lock — the user can still briefly reveal system bars by swiping from
+     * a screen edge (e.g. to check a carrier notification icon or pull
+     * down the real notification shade), and they auto-hide again shortly
+     * after. A true immersive-sticky mode without any escape would make
+     * this launcher unable to reach system-level UI at all, which is worse
+     * than Windows 11's own always-visible taskbar despite the visual
+     * mismatch — the taskbar built into this app already covers clock,
+     * battery, wifi, and notifications, so the system bars are redundant
+     * chrome most of the time anyway.
+     */
+    private fun applyImmersiveFullscreen() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val controller = WindowInsetsControllerCompat(window, window.decorView)
+        controller.hide(WindowInsetsCompat.Type.systemBars())
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
     }
 }
 

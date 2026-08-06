@@ -23,10 +23,10 @@ fun StartButton(
 ) {
     Box(
         modifier = modifier
-            .size(40.dp)
-            .clip(RoundedCornerShape(6.dp))
+            .size(48.dp)
+            .clip(RoundedCornerShape(4.dp))
             .background(
-                if (isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                if (isActive) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                 else androidx.compose.ui.graphics.Color.Transparent
             )
             .clickable(onClick = onClick),
@@ -35,8 +35,8 @@ fun StartButton(
         Icon(
             imageVector = Icons.Filled.Window,
             contentDescription = "Start",
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(20.dp)
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(22.dp)
         )
     }
 }
