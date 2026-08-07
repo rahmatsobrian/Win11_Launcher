@@ -90,6 +90,7 @@ private fun AppDrawerRow(
 ) {
     val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
+    val isBuiltInApp = app.packageName == "internal"
 
     Box {
         Row(
@@ -108,42 +109,60 @@ private fun AppDrawerRow(
             )
         }
 
-        AppContextMenu(
-            expanded = showMenu,
-            onDismiss = { showMenu = false },
-            actions = listOf(
+        val menuActions = buildList {
+            add(
                 ContextMenuAction(
                     label = "Add to Home screen",
                     icon = Icons.Filled.Add,
                     onClick = onAddToHome
-                ),
+                )
+            )
+            add(
                 ContextMenuAction(
                     label = "Pin to Start",
                     icon = Icons.Filled.PushPin,
                     onClick = onPinToStart
-                ),
+                )
+            )
+            add(
                 ContextMenuAction(
                     label = "Pin to taskbar",
                     icon = Icons.Filled.PushPin,
                     onClick = onPinToTaskbar
-                ),
-                ContextMenuAction(
-                    label = "Hide app",
-                    icon = Icons.Filled.VisibilityOff,
-                    onClick = onHide
-                ),
-                ContextMenuAction(
-                    label = "App info",
-                    icon = Icons.Filled.Info,
-                    onClick = {
-                        val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = android.net.Uri.fromParts("package", app.packageName, null)
-                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context.startActivity(intent)
-                    }
                 )
             )
+            // Built-in screens (Settings, File Explorer) live inside this
+            // app rather than being separately installed Android apps, so
+            // they have no PackageManager entry to hide or show a system
+            // "App info" details page for.
+            if (!isBuiltInApp) {
+                add(
+                    ContextMenuAction(
+                        label = "Hide app",
+                        icon = Icons.Filled.VisibilityOff,
+                        onClick = onHide
+                    )
+                )
+                add(
+                    ContextMenuAction(
+                        label = "App info",
+                        icon = Icons.Filled.Info,
+                        onClick = {
+                            val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = android.net.Uri.fromParts("package", app.packageName, null)
+                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                        }
+                    )
+                )
+            }
+        }
+
+        AppContextMenu(
+            expanded = showMenu,
+            onDismiss = { showMenu = false },
+            actions = menuActions
         )
     }
 }

@@ -59,7 +59,21 @@ class DesktopViewModel @Inject constructor(
             val existingItems = desktopRepository.observeDesktopItems(0).first()
             if (existingItems.isNotEmpty()) return@launch
 
-            val installedApps = installedAppsRepository.observeInstalledApps().first()
+            // MainActivity kicks off installedAppsRepository.refreshInstalledApps()
+            // on its own coroutine at the same time this ViewModel is created,
+            // so the very first Flow emission observed here can still be the
+            // pre-refresh empty list. Wait (bounded) for a non-empty emission
+            // instead of taking whatever arrives first, or seeding silently
+            // no-ops on a fresh install.
+            val installedApps = try {
+                kotlinx.coroutines.withTimeout(5_000) {
+                    installedAppsRepository.observeInstalledApps().first { it.isNotEmpty() }
+                }
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                emptyList()
+            }
+            if (installedApps.isEmpty()) return@launch
+
             val seedApps = installedApps
                 .filterNot { it.isSystemApp }
                 .ifEmpty { installedApps }

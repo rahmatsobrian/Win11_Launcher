@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.collectAsState
 import com.siroha.feature.appdrawer.AppDrawerScreen
 import com.siroha.feature.desktop.DesktopScreen
+import com.siroha.feature.filemanager.FileManagerScreen
 import com.siroha.feature.settings.SettingsScreen
 import com.siroha.feature.startmenu.StartMenuOverlay
 import com.siroha.feature.taskbar.TaskbarScreen
@@ -31,7 +32,18 @@ import com.siroha.feature.taskbar.system.SystemStatusProvider
 import com.siroha.win11launcher.core.AppLauncher
 import com.siroha.win11launcher.core.SystemControlHelper
 
-private enum class OverlayScreen { NONE, START_MENU, APP_DRAWER, SETTINGS, QUICK_SETTINGS, NOTIFICATION_CENTER }
+private enum class OverlayScreen { NONE, START_MENU, APP_DRAWER, SETTINGS, QUICK_SETTINGS, NOTIFICATION_CENTER, FILE_MANAGER }
+
+/** ComponentKey values reserved for launcher-internal screens (Settings,
+ * File Explorer) that live inside this app rather than being separate
+ * installed Android apps. These match the synthetic AppEntity rows seeded
+ * by InstalledAppsRepositoryImpl (packageName="internal", using the same
+ * componentKey format PackageManager-backed apps use: package/activity/user)
+ * so they flow through pinning, search, and the app drawer identically to
+ * real apps — they only get special-cased at the point of actually
+ * launching them, here in openApp(). */
+private const val INTERNAL_SETTINGS = "internal/settings/0"
+private const val INTERNAL_FILE_MANAGER = "internal/filemanager/0"
 
 /**
  * The launcher root is not a conventional back-stack navigation graph:
@@ -62,8 +74,14 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
         )
 
     fun openApp(componentKey: String) {
-        overlay = OverlayScreen.NONE
-        appLauncher.launch(context, componentKey, coroutineScope)
+        when (componentKey) {
+            INTERNAL_SETTINGS -> overlay = OverlayScreen.SETTINGS
+            INTERNAL_FILE_MANAGER -> overlay = OverlayScreen.FILE_MANAGER
+            else -> {
+                overlay = OverlayScreen.NONE
+                appLauncher.launch(context, componentKey, coroutineScope)
+            }
+        }
     }
 
     // Only intercept back presses while an overlay is showing — with no
@@ -118,6 +136,14 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
                 onNavigateToAbout = { /* pushed as a nested overlay by feature:settings' own state */ },
                 onNavigateToDeveloperOptions = { /* same */ }
             )
+        }
+
+        AnimatedVisibility(
+            visible = overlay == OverlayScreen.FILE_MANAGER,
+            enter = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
+            exit = slideOutVertically(tween(180)) { it } + fadeOut(tween(180))
+        ) {
+            FileManagerScreen(onDismiss = { overlay = OverlayScreen.NONE })
         }
 
         QuickSettingsOverlay(

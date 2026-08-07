@@ -83,17 +83,29 @@ class MainActivity : ComponentActivity() {
      * Hides both the status bar and navigation bar behind swipe-in gesture
      * (BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE) rather than a hard kiosk
      * lock — the user can still briefly reveal system bars by swiping from
-     * a screen edge (e.g. to check a carrier notification icon or pull
-     * down the real notification shade), and they auto-hide again shortly
-     * after. A true immersive-sticky mode without any escape would make
-     * this launcher unable to reach system-level UI at all, which is worse
-     * than Windows 11's own always-visible taskbar despite the visual
-     * mismatch — the taskbar built into this app already covers clock,
-     * battery, wifi, and notifications, so the system bars are redundant
-     * chrome most of the time anyway.
+     * a screen edge, and they auto-hide again shortly after.
+     *
+     * Uses both the modern WindowInsetsControllerCompat API and the legacy
+     * SYSTEM_UI_FLAG_* / WindowManager flags together. Several OEM skins
+     * (MIUI in particular) have historically been inconsistent about
+     * honoring the insets-controller-only approach for a HOME/LAUNCHER
+     * activity specifically, while still respecting the older flag-based
+     * API — setting both is redundant on stock AOSP but meaningfully more
+     * reliable across real-world skinned devices.
      */
     private fun applyImmersiveFullscreen() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility = (
+            android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                or android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                or android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                or android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                or android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
+                or android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            )
+
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         controller.hide(WindowInsetsCompat.Type.systemBars())
         controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE

@@ -153,18 +153,24 @@ private fun TaskbarStartAndApps(
             expanded = menuApp != null,
             onDismiss = { onContextMenuAppChange(null) },
             actions = if (menuApp != null) {
-                listOf(
-                    ContextMenuAction(
-                        label = "Unpin from taskbar",
-                        icon = Icons.Filled.PushPin,
-                        onClick = { onUnpin(menuApp.componentKey) }
-                    ),
-                    ContextMenuAction(
-                        label = "App info",
-                        icon = Icons.Filled.Info,
-                        onClick = { openAppInfoSettings(context, menuApp.packageName) }
+                buildList {
+                    add(
+                        ContextMenuAction(
+                            label = "Unpin from taskbar",
+                            icon = Icons.Filled.PushPin,
+                            onClick = { onUnpin(menuApp.componentKey) }
+                        )
                     )
-                )
+                    if (menuApp.packageName != "internal") {
+                        add(
+                            ContextMenuAction(
+                                label = "App info",
+                                icon = Icons.Filled.Info,
+                                onClick = { openAppInfoSettings(context, menuApp.packageName) }
+                            )
+                        )
+                    }
+                }
             } else {
                 emptyList()
             }

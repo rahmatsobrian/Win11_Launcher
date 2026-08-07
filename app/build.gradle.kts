@@ -69,6 +69,7 @@ dependencies {
     implementation(project(":feature:search"))
     implementation(project(":feature:widgets"))
     implementation(project(":feature:settings"))
+    implementation(project(":feature:filemanager"))
 
     implementation(libs.core.ktx)
     implementation(libs.lifecycle.runtime.ktx)

@@ -201,17 +201,19 @@ private fun buildDesktopContextActions(
 
     if (item is DesktopItem.AppShortcut) {
         val packageName = item.appComponentKey.substringBefore("/")
-        actions += ContextMenuAction(
-            label = "App info",
-            icon = Icons.Filled.Info,
-            onClick = {
-                val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                    data = android.net.Uri.fromParts("package", packageName, null)
-                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (packageName != "internal") {
+            actions += ContextMenuAction(
+                label = "App info",
+                icon = Icons.Filled.Info,
+                onClick = {
+                    val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = android.net.Uri.fromParts("package", packageName, null)
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
                 }
-                context.startActivity(intent)
-            }
-        )
+            )
+        }
     }
 
     return actions

@@ -75,13 +75,33 @@ class InstalledAppsRepositoryImpl @Inject constructor(
             )
         }
 
+        val builtInApps = listOf(
+            AppInfo(
+                packageName = "internal",
+                activityClassName = "settings",
+                label = "Settings",
+                userHandleId = 0,
+                isSystemApp = true,
+                installTimeMillis = 0L
+            ),
+            AppInfo(
+                packageName = "internal",
+                activityClassName = "filemanager",
+                label = "File Explorer",
+                userHandleId = 0,
+                isSystemApp = true,
+                installTimeMillis = 0L
+            )
+        )
+
         // Preserve user-set flags (hidden/pinned/launch stats) for apps that
         // already exist in the DB by merging rather than blind-overwriting.
-        val existingByKey = freshEntities.associateBy { it.componentKey }.keys
+        val allFreshApps = freshEntities + builtInApps
+        val existingByKey = allFreshApps.associateBy { it.componentKey }.keys
             .mapNotNull { key -> appDao.getByComponentKey(key) }
             .associateBy { it.componentKey }
 
-        val mergedEntities: List<AppEntity> = freshEntities.map { fresh ->
+        val mergedEntities: List<AppEntity> = allFreshApps.map { fresh ->
             val existing = existingByKey[fresh.componentKey]
             if (existing != null) {
                 existing.copy(
@@ -90,7 +110,15 @@ class InstalledAppsRepositoryImpl @Inject constructor(
                     installTimeMillis = fresh.installTimeMillis
                 )
             } else {
-                fresh.toEntity()
+                val isBuiltIn = fresh.packageName == "internal"
+                fresh.toEntity().copy(
+                    // Built-in screens (Settings, File Explorer) are pinned
+                    // to Start by default on first creation so they're
+                    // immediately discoverable — matching how a real OS
+                    // ships with its Settings app already accessible rather
+                    // than buried in an app list the user has to know to check.
+                    isPinnedToStart = isBuiltIn
+                )
             }
         }
 
