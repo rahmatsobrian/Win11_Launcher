@@ -6,40 +6,85 @@ import android.content.Intent
 import android.os.Process
 import android.util.Log
 import android.widget.Toast
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import com.siroha.core.domain.model.AppInfo
 import com.siroha.core.domain.repository.InstalledAppsRepository
+import com.siroha.core.domain.repository.SettingsRepository
 import com.siroha.core.domain.usecase.LaunchAppUseCase
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "AppLauncher"
 
-/**
- * Resolves a componentKey (packageName/activityClassName/userHandleId) back
- * into a launch Intent and fires it. Kept separate from the ViewModels in
- * feature modules because starting an Activity needs a Context that is
- * either an Activity or carries FLAG_ACTIVITY_NEW_TASK — a concern that
- * belongs at the app-module boundary, not inside feature/domain layers.
- */
 @Singleton
 class AppLauncher @Inject constructor(
     private val installedAppsRepository: InstalledAppsRepository,
-    private val launchAppUseCase: LaunchAppUseCase
+    private val launchAppUseCase: LaunchAppUseCase,
+    private val settingsRepository: SettingsRepository
 ) {
 
     fun launch(context: Context, componentKey: String, scope: CoroutineScope) {
         scope.launch {
+            val settings = settingsRepository.observeSettings().first()
             val app = installedAppsRepository.getApp(componentKey)
             if (app == null) {
                 Log.w(TAG, "No app found for componentKey=$componentKey")
                 Toast.makeText(context, "App not found", Toast.LENGTH_SHORT).show()
                 return@launch
             }
+
+            if (settings.appLockEnabled && componentKey in settings.lockedApps) {
+                val activity = context as? FragmentActivity
+                if (activity != null) {
+                    showBiometricPrompt(activity) {
+                        launchAppUseCase(componentKey)
+                        launchIntent(context, app)
+                    }
+                } else {
+                    Toast.makeText(context, "Authentication required", Toast.LENGTH_SHORT).show()
+                }
+                return@launch
+            }
+
             launchAppUseCase(componentKey)
             launchIntent(context, app)
         }
+    }
+
+    private fun showBiometricPrompt(activity: FragmentActivity, onSuccess: () -> Unit) {
+        val executor = ContextCompat.getMainExecutor(activity)
+
+        val biometricPrompt = BiometricPrompt(activity, executor,
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    super.onAuthenticationSucceeded(result)
+                    onSuccess()
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    super.onAuthenticationError(errorCode, errString)
+                    Toast.makeText(activity, "Authentication cancelled", Toast.LENGTH_SHORT).show()
+                }
+
+                override fun onAuthenticationFailed() {
+                    super.onAuthenticationFailed()
+                    Toast.makeText(activity, "Authentication failed", Toast.LENGTH_SHORT).show()
+                }
+            })
+
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("App Lock")
+            .setSubtitle("Authenticate to open this app")
+            .setNegativeButtonText("Cancel")
+            .build()
+
+        biometricPrompt.authenticate(promptInfo)
     }
 
     private fun launchIntent(context: Context, app: AppInfo) {
@@ -53,12 +98,6 @@ class AppLauncher @Inject constructor(
             if (app.userHandleId == Process.myUserHandle().hashCode()) {
                 context.startActivity(intent)
             } else {
-                // Cross-profile (work-profile) launch requires LauncherApps,
-                // which needs the actual UserHandle object rather than our
-                // hashed componentKey representation — resolved by re-querying
-                // LauncherApps.getActivityList for a matching UserHandle at
-                // launch time rather than persisting the UserHandle itself
-                // (UserHandle is not stable across reboots to serialize).
                 launchViaLauncherApps(context, app)
             }
         } catch (e: ActivityNotFoundException) {

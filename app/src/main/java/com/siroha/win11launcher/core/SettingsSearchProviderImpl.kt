@@ -30,8 +30,15 @@ class SettingsSearchProviderImpl @Inject constructor() : SettingsSearchProvider 
         entry("desktop_labels", "Icon labels", "Show or hide desktop icon labels"),
         entry("desktop_lock", "Lock desktop layout", "Prevent desktop icon changes"),
         entry("app_lock", "App Lock", "Biometric lock for chosen apps"),
+        entry("backup_export", "Export backup", "Copy launcher settings to clipboard"),
+        entry("backup_import", "Import backup", "Restore settings from clipboard"),
         entry("developer_options", "Developer options", "FPS counter, benchmarks, debug tools"),
-        entry("about", "About", "Version, licenses, feedback")
+        entry("developer_fps", "FPS Counter", "Display frames-per-second overlay"),
+        entry("developer_recomp", "Recomposition Counter", "Show Compose recomposition counts"),
+        entry("developer_layout", "Layout Boundaries", "Highlight Compose layout boundaries"),
+        entry("developer_benchmarks", "Performance Benchmarks", "Startup and rendering benchmarks"),
+        entry("about", "About", "Version, licenses, feedback"),
+        entry("calculator", "Calculator", "Built-in calculator app")
     )
 
     override suspend fun search(query: String): List<SearchResultItem.SettingResult> {

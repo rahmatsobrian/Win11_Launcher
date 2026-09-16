@@ -15,6 +15,9 @@ object PreferenceKeys {
     val ANIMATIONS_ENABLED = booleanPreferencesKey("animations_enabled")
     val APP_LOCK_ENABLED = booleanPreferencesKey("app_lock_enabled")
     val HIDDEN_APPS_ENABLED = booleanPreferencesKey("hidden_apps_enabled")
+    val FONT_SIZE = intPreferencesKey("font_size")
+    val WALLPAPER_MODE = stringPreferencesKey("wallpaper_mode")
+    val WALLPAPER_URI = stringPreferencesKey("wallpaper_uri")
 
     // Taskbar
     val TASKBAR_ALIGNMENT = stringPreferencesKey("taskbar_alignment")
@@ -39,4 +42,13 @@ object PreferenceKeys {
     val DESKTOP_SHOW_LABELS = booleanPreferencesKey("desktop_show_labels")
     val DESKTOP_LAYOUT_LOCKED = booleanPreferencesKey("desktop_layout_locked")
     val DESKTOP_PAGE_COUNT = intPreferencesKey("desktop_page_count")
+
+    // Developer
+    val DEVELOPER_FPS_COUNTER = booleanPreferencesKey("developer_fps_counter")
+    val DEVELOPER_RECOMPOSITION_COUNTER = booleanPreferencesKey("developer_recomposition_counter")
+    val DEVELOPER_LAYOUT_BOUNDARIES = booleanPreferencesKey("developer_layout_boundaries")
+    val DEVELOPER_BENCHMARKS = booleanPreferencesKey("developer_benchmarks")
+
+    // Security
+    val LOCKED_APPS = stringPreferencesKey("locked_apps")
 }

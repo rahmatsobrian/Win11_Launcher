@@ -2,10 +2,13 @@ package com.siroha.feature.startmenu
 
 import android.graphics.Bitmap
 import com.siroha.core.domain.model.AppInfo
+import com.siroha.feature.search.SearchResultItem
 
 data class StartMenuUiState(
     val searchQuery: String = "",
     val searchResults: List<AppInfo> = emptyList(),
+    val settingResults: List<SearchResultItem.SettingResult> = emptyList(),
+    val contactResults: List<SearchResultItem.ContactResult> = emptyList(),
     val pinnedApps: List<AppInfo> = emptyList(),
     val recommendedApps: List<AppInfo> = emptyList(),
     val widthDp: Int = 640,

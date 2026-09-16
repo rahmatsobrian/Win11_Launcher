@@ -17,5 +17,6 @@ data class AppDrawerUiState(
     val isSearching: Boolean = false,
     val searchResults: List<AppInfo> = emptyList(),
     val isLoading: Boolean = true,
-    val iconBitmaps: Map<String, Bitmap> = emptyMap()
+    val iconBitmaps: Map<String, Bitmap> = emptyMap(),
+    val lockedApps: Set<String> = emptySet()
 )

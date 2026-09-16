@@ -24,6 +24,12 @@ interface FileManagerRepository {
 
     suspend fun delete(path: String): Result<Unit>
 
+    suspend fun copy(sourcePath: String, destDirPath: String): Result<Unit>
+
+    suspend fun move(sourcePath: String, destDirPath: String): Result<Unit>
+
+    suspend fun getFileProperties(path: String): FileProperties?
+
     suspend fun getStorageInfo(): StorageInfo
 
     fun requestFullStorageAccess()
@@ -33,4 +39,15 @@ data class StorageInfo(
     val totalBytes: Long,
     val freeBytes: Long,
     val usedBytes: Long
+)
+
+data class FileProperties(
+    val name: String,
+    val path: String,
+    val type: String,
+    val sizeBytes: Long,
+    val lastModified: Long,
+    val isHidden: Boolean,
+    val isReadable: Boolean,
+    val isWritable: Boolean
 )

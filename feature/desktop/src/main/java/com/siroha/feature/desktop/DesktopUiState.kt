@@ -15,5 +15,6 @@ data class DesktopUiState(
     val showLabels: Boolean = true,
     val isLoading: Boolean = true,
     val iconBitmaps: Map<String, Bitmap> = emptyMap(),
-    val appLabels: Map<String, String> = emptyMap()
+    val appLabels: Map<String, String> = emptyMap(),
+    val lockedApps: Set<String> = emptySet()
 )

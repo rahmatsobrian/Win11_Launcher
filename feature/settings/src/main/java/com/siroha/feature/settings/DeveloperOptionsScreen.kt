@@ -14,14 +14,21 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.siroha.feature.settings.components.SettingsSwitchRow
 
 @Composable
 fun DeveloperOptionsScreen(
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel()
 ) {
+    val settings by viewModel.settings.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -42,64 +49,31 @@ fun DeveloperOptionsScreen(
         }
         HorizontalDivider()
 
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text(
-                text = "Debug Tools",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-
-            DeveloperOptionItem(
+        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+            SettingsSwitchRow(
                 title = "FPS Counter",
-                subtitle = "Display frames-per-second overlay",
-                comingSoon = true
+                subtitle = "Display frames-per-second overlay on screen",
+                checked = settings.developer.fpsCounterEnabled,
+                onCheckedChange = { viewModel.setDeveloperOption("fps", it) }
             )
-
-            DeveloperOptionItem(
+            SettingsSwitchRow(
                 title = "Recomposition Counter",
                 subtitle = "Show Compose recomposition counts per screen",
-                comingSoon = true
+                checked = settings.developer.recompositionCounterEnabled,
+                onCheckedChange = { viewModel.setDeveloperOption("recomposition", it) }
             )
-
-            DeveloperOptionItem(
+            SettingsSwitchRow(
                 title = "Layout Boundaries",
                 subtitle = "Highlight Compose layout boundaries",
-                comingSoon = true
+                checked = settings.developer.layoutBoundariesEnabled,
+                onCheckedChange = { viewModel.setDeveloperOption("layout", it) }
             )
-
-            DeveloperOptionItem(
+            SettingsSwitchRow(
                 title = "Performance Benchmarks",
-                subtitle = "Run startup and rendering benchmarks",
-                comingSoon = true
+                subtitle = "Show startup time and frame timing info",
+                checked = settings.developer.benchmarksEnabled,
+                onCheckedChange = { viewModel.setDeveloperOption("benchmarks", it) }
             )
         }
-    }
-}
-
-@Composable
-private fun DeveloperOptionItem(title: String, subtitle: String, comingSoon: Boolean = false) {
-    Column(modifier = Modifier.padding(vertical = 10.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.weight(1f)
-            )
-            if (comingSoon) {
-                Text(
-                    text = "Coming soon",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
-                )
-            }
-        }
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-            modifier = Modifier.padding(top = 2.dp)
-        )
     }
 }

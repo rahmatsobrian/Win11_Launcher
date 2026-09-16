@@ -14,11 +14,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -52,12 +61,11 @@ fun DesktopScreen(
     var isWidgetPickerVisible by remember { mutableStateOf(false) }
     var pendingWidget by remember { mutableStateOf<Pair<Int, AppWidgetProviderInfo>?>(null) }
     var openFolder by remember { mutableStateOf<DesktopItem.Folder?>(null) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var showCreateFolderDialog by remember { mutableStateOf(false) }
+    var renameTarget by remember { mutableStateOf<Pair<String, String>?>(null) } // id, currentLabel
+    var selectedItemsForFolder by remember { mutableStateOf<List<String>>(emptyList()) }
 
-    // Allocating an appWidgetId does not by itself grant this app
-    // permission to bind that widget — AppWidgetManager requires either
-    // bindAppWidgetIdIfAllowed() to succeed silently, or (if it returns
-    // false) an explicit user confirmation via ACTION_APPWIDGET_BIND. This
-    // launcher handles that second, user-facing path.
     val bindWidgetLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -103,7 +111,7 @@ fun DesktopScreen(
             onItemClick = { item -> handleItemClick(item, onOpenApp) { folder -> openFolder = folder } },
             onItemLongClick = { item -> contextMenuItem = item },
             onItemMoved = { itemId, newPosition -> viewModel.moveItem(itemId, newPosition) },
-            modifier = Modifier.padding(bottom = 56.dp) // reserve space for taskbar
+            modifier = Modifier.padding(bottom = 56.dp)
         )
 
         if (state.pageCount > 1) {
@@ -134,7 +142,10 @@ fun DesktopScreen(
             actions = buildDesktopContextActions(
                 item = menuItem,
                 context = context,
-                onRemove = { id -> viewModel.removeItem(id) }
+                onRemove = { id -> viewModel.removeItem(id) },
+                onRename = { id, label -> renameTarget = id to label; showRenameDialog = true },
+                onLockApp = { componentKey -> viewModel.toggleAppLock(componentKey) },
+                isAppLocked = menuItem is DesktopItem.AppShortcut && menuItem.appComponentKey in state.lockedApps
             )
         )
 
@@ -169,9 +180,6 @@ fun DesktopScreen(
                 if (alreadyBound) {
                     completeWidgetPlacement(viewModel, appWidgetId, providerInfo, state)
                 } else {
-                    // The system requires explicit user confirmation for this
-                    // provider — launch the system bind dialog and finish
-                    // placement only if the user approves it.
                     pendingWidget = appWidgetId to providerInfo
                     val bindIntent = android.content.Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
                         putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
@@ -181,6 +189,111 @@ fun DesktopScreen(
                 }
             }
         )
+
+        // Page management buttons
+        if (!state.isLayoutLocked) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 64.dp)
+            ) {
+                if (state.pageCount > 1) {
+                    androidx.compose.material3.IconButton(
+                        onClick = { viewModel.removePage(state.currentPage) },
+                        modifier = Modifier
+                            .padding(horizontal = 4.dp)
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                    ) {
+                        Icon(
+                            Icons.Filled.Remove,
+                            contentDescription = "Remove page",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+                androidx.compose.material3.IconButton(
+                    onClick = { viewModel.addPage() },
+                    modifier = Modifier
+                        .padding(horizontal = 4.dp)
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                ) {
+                    Icon(
+                        Icons.Filled.Add,
+                        contentDescription = "Add page",
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+
+        // Rename dialog
+        if (showRenameDialog && renameTarget != null) {
+            var newName by remember { mutableStateOf(renameTarget!!.second) }
+            AlertDialog(
+                onDismissRequest = { showRenameDialog = false; renameTarget = null },
+                title = { Text("Rename") },
+                text = {
+                    OutlinedTextField(
+                        value = newName,
+                        onValueChange = { newName = it },
+                        label = { Text("Name") },
+                        singleLine = true
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (newName.isNotBlank()) {
+                            viewModel.renameItem(renameTarget!!.first, newName)
+                        }
+                        showRenameDialog = false
+                        renameTarget = null
+                    }) {
+                        Text("Rename")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showRenameDialog = false; renameTarget = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // Create folder dialog
+        if (showCreateFolderDialog) {
+            var folderName by remember { mutableStateOf("New Folder") }
+            AlertDialog(
+                onDismissRequest = { showCreateFolderDialog = false },
+                title = { Text("Create Folder") },
+                text = {
+                    OutlinedTextField(
+                        value = folderName,
+                        onValueChange = { folderName = it },
+                        label = { Text("Folder name") },
+                        singleLine = true
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (folderName.isNotBlank()) {
+                            viewModel.createFolder(folderName, emptyList())
+                        }
+                        showCreateFolderDialog = false
+                    }) {
+                        Text("Create")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCreateFolderDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -229,17 +342,39 @@ private fun findFirstAvailablePosition(
 private fun buildDesktopContextActions(
     item: DesktopItem?,
     context: android.content.Context,
-    onRemove: (String) -> Unit
+    onRemove: (String) -> Unit,
+    onRename: (String, String) -> Unit,
+    onLockApp: (String) -> Unit,
+    isAppLocked: Boolean
 ): List<ContextMenuAction> {
     if (item == null) return emptyList()
 
-    val actions = mutableListOf(
-        ContextMenuAction(
-            label = "Remove from desktop",
-            icon = Icons.Filled.Delete,
-            isDestructive = true,
-            onClick = { onRemove(item.id) }
+    val actions = mutableListOf<ContextMenuAction>()
+
+    if (item is DesktopItem.AppShortcut || item is DesktopItem.Folder) {
+        actions += ContextMenuAction(
+            label = "Rename",
+            icon = Icons.Filled.Edit,
+            onClick = { onRename(item.id, if (item is DesktopItem.AppShortcut) item.customLabel ?: "" else if (item is DesktopItem.Folder) item.name else "") }
         )
+    }
+
+    if (item is DesktopItem.AppShortcut) {
+        val packageName = item.appComponentKey.substringBefore("/")
+        if (packageName != "internal") {
+            actions += ContextMenuAction(
+                label = if (isAppLocked) "Unlock app" else "Lock app",
+                icon = Icons.Filled.Lock,
+                onClick = { onLockApp(item.appComponentKey) }
+            )
+        }
+    }
+
+    actions += ContextMenuAction(
+        label = "Remove from desktop",
+        icon = Icons.Filled.Delete,
+        isDestructive = true,
+        onClick = { onRemove(item.id) }
     )
 
     if (item is DesktopItem.AppShortcut) {

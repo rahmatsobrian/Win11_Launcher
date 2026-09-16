@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +45,8 @@ fun AppDrawerList(
     onPinToTaskbar: (AppInfo) -> Unit,
     onPinToStart: (AppInfo) -> Unit,
     onAddToHome: (AppInfo) -> Unit,
+    lockedApps: Set<String> = emptySet(),
+    onLockApp: (AppInfo) -> Unit = {},
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState()
 ) {
@@ -71,7 +74,9 @@ fun AppDrawerList(
                     onHide = { onHide(app) },
                     onPinToTaskbar = { onPinToTaskbar(app) },
                     onPinToStart = { onPinToStart(app) },
-                    onAddToHome = { onAddToHome(app) }
+                    onAddToHome = { onAddToHome(app) },
+                    isLocked = app.componentKey in lockedApps,
+                    onLockApp = { onLockApp(app) }
                 )
             }
         }
@@ -86,7 +91,9 @@ private fun AppDrawerRow(
     onHide: () -> Unit,
     onPinToTaskbar: () -> Unit,
     onPinToStart: () -> Unit,
-    onAddToHome: () -> Unit
+    onAddToHome: () -> Unit,
+    isLocked: Boolean = false,
+    onLockApp: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
@@ -131,11 +138,14 @@ private fun AppDrawerRow(
                     onClick = onPinToTaskbar
                 )
             )
-            // Built-in screens (Settings, File Explorer) live inside this
-            // app rather than being separately installed Android apps, so
-            // they have no PackageManager entry to hide or show a system
-            // "App info" details page for.
             if (!isBuiltInApp) {
+                add(
+                    ContextMenuAction(
+                        label = if (isLocked) "Unlock app" else "Lock app",
+                        icon = Icons.Filled.Lock,
+                        onClick = onLockApp
+                    )
+                )
                 add(
                     ContextMenuAction(
                         label = "Hide app",

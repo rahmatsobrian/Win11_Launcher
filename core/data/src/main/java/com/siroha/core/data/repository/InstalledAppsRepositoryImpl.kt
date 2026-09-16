@@ -91,6 +91,14 @@ class InstalledAppsRepositoryImpl @Inject constructor(
                 userHandleId = 0,
                 isSystemApp = true,
                 installTimeMillis = 0L
+            ),
+            AppInfo(
+                packageName = "internal",
+                activityClassName = "calculator",
+                label = "Calculator",
+                userHandleId = 0,
+                isSystemApp = true,
+                installTimeMillis = 0L
             )
         )
 

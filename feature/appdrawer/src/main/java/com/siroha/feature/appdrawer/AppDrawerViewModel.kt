@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.siroha.core.domain.model.AppInfo
 import com.siroha.core.domain.repository.IconRepository
 import com.siroha.core.domain.repository.InstalledAppsRepository
+import com.siroha.core.domain.repository.SettingsRepository
 import com.siroha.core.domain.usecase.AddAppToDesktopUseCase
 import com.siroha.core.domain.usecase.SearchLauncherUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,6 +29,7 @@ import javax.inject.Inject
 @HiltViewModel
 class AppDrawerViewModel @Inject constructor(
     private val installedAppsRepository: InstalledAppsRepository,
+    private val settingsRepository: SettingsRepository,
     private val searchLauncherUseCase: SearchLauncherUseCase,
     private val addAppToDesktopUseCase: AddAppToDesktopUseCase,
     private val iconRepository: IconRepository
@@ -47,7 +49,8 @@ class AppDrawerViewModel @Inject constructor(
         val mostUsed: List<AppInfo>,
         val sort: AppDrawerSortMode,
         val query: String,
-        val results: List<AppInfo>
+        val results: List<AppInfo>,
+        val lockedApps: Set<String> = emptySet()
     )
 
     val uiState: StateFlow<AppDrawerUiState> = combine(
@@ -55,9 +58,10 @@ class AppDrawerViewModel @Inject constructor(
         installedAppsRepository.observeMostUsedApps(limit = 100),
         sortMode,
         searchQuery,
-        searchResults
-    ) { allApps, mostUsed, sort, query, results ->
-        DrawerPartialState(allApps, mostUsed, sort, query, results)
+        searchResults,
+        settingsRepository.observeSettings()
+    ) { allApps, mostUsed, sort, query, results, settings ->
+        DrawerPartialState(allApps, mostUsed, sort, query, results, settings.lockedApps)
     }.combine(iconBitmaps) { partial, icons ->
         val sections = when (partial.sort) {
             AppDrawerSortMode.ALPHABETICAL -> buildAlphabeticalSections(partial.allApps)
@@ -78,7 +82,8 @@ class AppDrawerViewModel @Inject constructor(
             isSearching = partial.query.isNotBlank(),
             searchResults = partial.results,
             isLoading = false,
-            iconBitmaps = icons
+            iconBitmaps = icons,
+            lockedApps = partial.lockedApps
         )
     }.stateIn(
         scope = viewModelScope,
@@ -137,6 +142,15 @@ class AppDrawerViewModel @Inject constructor(
     fun addToHomeScreen(componentKey: String) {
         viewModelScope.launch {
             addAppToDesktopUseCase(componentKey)
+        }
+    }
+
+    fun toggleAppLock(componentKey: String) {
+        viewModelScope.launch {
+            settingsRepository.updateSettings { settings ->
+                val current = settings.lockedApps
+                settings.copy(lockedApps = if (componentKey in current) current - componentKey else current + componentKey)
+            }
         }
     }
 

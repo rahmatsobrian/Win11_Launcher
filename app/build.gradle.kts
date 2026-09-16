@@ -85,6 +85,8 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
 
+    implementation(libs.biometric)
+
     implementation(libs.datastore.preferences)
     implementation(libs.work.runtime.ktx)
     implementation(libs.hilt.work)

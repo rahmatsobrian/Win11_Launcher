@@ -31,6 +31,13 @@ data class DesktopSettings(
     val pageCount: Int = 1
 )
 
+data class DeveloperSettings(
+    val fpsCounterEnabled: Boolean = false,
+    val recompositionCounterEnabled: Boolean = false,
+    val layoutBoundariesEnabled: Boolean = false,
+    val benchmarksEnabled: Boolean = false
+)
+
 data class LauncherSettings(
     val themeMode: ThemeMode = ThemeMode.AUTO,
     val dynamicColorEnabled: Boolean = true,
@@ -38,9 +45,16 @@ data class LauncherSettings(
     val blurIntensityPercent: Int = 60,
     val cornerRadiusDp: Int = 12,
     val animationsEnabled: Boolean = true,
+    val fontSize: Int = 14,
+    val wallpaperMode: WallpaperMode = WallpaperMode.DEFAULT,
+    val wallpaperUri: String? = null,
     val taskbar: TaskbarSettings = TaskbarSettings(),
     val startMenu: StartMenuSettings = StartMenuSettings(),
     val desktop: DesktopSettings = DesktopSettings(),
+    val developer: DeveloperSettings = DeveloperSettings(),
     val appLockEnabled: Boolean = false,
-    val hiddenAppsEnabled: Boolean = true
+    val hiddenAppsEnabled: Boolean = true,
+    val lockedApps: Set<String> = emptySet()
 )
+
+enum class WallpaperMode { DEFAULT, SOLID_COLOR, GALLERY }

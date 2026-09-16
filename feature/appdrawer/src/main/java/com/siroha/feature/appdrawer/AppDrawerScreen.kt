@@ -87,6 +87,8 @@ fun AppDrawerScreen(
                     onPinToTaskbar = { app -> viewModel.pinToTaskbar(app.componentKey) },
                     onPinToStart = { app -> viewModel.pinToStart(app.componentKey) },
                     onAddToHome = { app -> viewModel.addToHomeScreen(app.componentKey) },
+                    lockedApps = state.lockedApps,
+                    onLockApp = { app -> viewModel.toggleAppLock(app.componentKey) },
                     listState = listState,
                     modifier = Modifier.weight(1f)
                 )
@@ -97,7 +99,6 @@ fun AppDrawerScreen(
                         val sectionIndex = state.sections.indexOfFirst { it.letter == letter }
                         if (sectionIndex >= 0) {
                             coroutineScope.launch {
-                                // +1 per preceding section accounts for that section's sticky header row
                                 val flatIndex = state.sections.take(sectionIndex)
                                     .sumOf { it.apps.size + 1 }
                                 listState.animateScrollToItem(flatIndex)

@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -43,6 +45,7 @@ fun StartMenuOverlay(
     onDismiss: () -> Unit,
     onOpenApp: (String) -> Unit,
     onOpenAllApps: () -> Unit,
+    onOpenSettings: ((String) -> Unit)? = null,
     viewModel: StartMenuViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -60,10 +63,6 @@ fun StartMenuOverlay(
                 .clickable(onClick = onDismiss),
             contentAlignment = Alignment.BottomCenter
         ) {
-            // Reserve room for the taskbar (60dp) and a small margin so the
-            // menu never overflows past the visible screen — critical in
-            // landscape, where available height can be far smaller than
-            // the 720dp portrait default from StartMenuSettings.
             val reservedBottomDp = 60.dp
             val maxAvailableWidth = maxWidth - 16.dp
             val maxAvailableHeight = maxHeight - reservedBottomDp - 16.dp
@@ -82,7 +81,7 @@ fun StartMenuOverlay(
                         .height(effectiveHeight)
                         .clip(RoundedCornerShape(12.dp))
                         .background(tokens.taskbarChrome)
-                        .clickable(enabled = false) {} // absorb clicks so they don't dismiss via the scrim behind
+                        .clickable(enabled = false) {}
                 ) {
                     StartMenuContent(
                         state = state,
@@ -90,7 +89,8 @@ fun StartMenuOverlay(
                         onAppClick = { app -> onOpenApp(app.componentKey) },
                         onUnpin = { app -> viewModel.unpinFromStart(app.componentKey) },
                         onPinToTaskbar = { app -> viewModel.pinToTaskbar(app.componentKey) },
-                        onOpenAllApps = onOpenAllApps
+                        onOpenAllApps = onOpenAllApps,
+                        onSettingClick = onOpenSettings
                     )
                 }
             }
@@ -105,16 +105,17 @@ private fun StartMenuContent(
     onAppClick: (AppInfo) -> Unit,
     onUnpin: (AppInfo) -> Unit,
     onPinToTaskbar: (AppInfo) -> Unit,
-    onOpenAllApps: () -> Unit
+    onOpenAllApps: () -> Unit,
+    onSettingClick: ((String) -> Unit)? = null
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         StartMenuSearchBar(query = state.searchQuery, onQueryChange = onQueryChange)
 
         if (state.isSearching) {
-            SearchResultsList(
-                results = state.searchResults,
-                iconBitmaps = state.iconBitmaps,
+            UniversalSearchResults(
+                state = state,
                 onAppClick = onAppClick,
+                onSettingClick = onSettingClick,
                 modifier = Modifier.fillMaxSize()
             )
         } else {
@@ -144,6 +145,119 @@ private fun StartMenuContent(
                     iconBitmaps = state.iconBitmaps,
                     onAppClick = onAppClick
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun UniversalSearchResults(
+    state: StartMenuUiState,
+    onAppClick: (AppInfo) -> Unit,
+    onSettingClick: ((String) -> Unit)?,
+    modifier: Modifier = Modifier
+) {
+    val hasAnyResults = state.searchResults.isNotEmpty() || state.settingResults.isNotEmpty() || state.contactResults.isNotEmpty()
+
+    if (!hasAnyResults) {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+        ) {
+            Text(
+                text = "No results found",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
+        return
+    }
+
+    LazyColumn(modifier = modifier.padding(horizontal = 16.dp)) {
+        if (state.searchResults.isNotEmpty()) {
+            item {
+                Text(
+                    text = "Apps",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(vertical = 6.dp)
+                )
+            }
+            items(state.searchResults, key = { it.componentKey }) { app ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onAppClick(app) }
+                        .padding(horizontal = 8.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    com.siroha.designsystem.components.AppIcon(
+                        label = app.label,
+                        bitmap = state.iconBitmaps[app.componentKey],
+                        size = 32.dp,
+                        cornerRadius = 6.dp
+                    )
+                    Text(
+                        text = app.label,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(start = 12.dp)
+                    )
+                }
+            }
+        }
+
+        if (state.settingResults.isNotEmpty()) {
+            item {
+                Text(
+                    text = "Settings",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(vertical = 6.dp)
+                )
+            }
+            items(state.settingResults, key = { it.id }) { result ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSettingClick?.invoke(result.settingsRoute) }
+                        .padding(horizontal = 8.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = result.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(start = 12.dp)
+                    )
+                }
+            }
+        }
+
+        if (state.contactResults.isNotEmpty()) {
+            item {
+                Text(
+                    text = "Contacts",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(vertical = 6.dp)
+                )
+            }
+            items(state.contactResults, key = { it.id }) { result ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = result.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(start = 12.dp)
+                    )
+                }
             }
         }
     }

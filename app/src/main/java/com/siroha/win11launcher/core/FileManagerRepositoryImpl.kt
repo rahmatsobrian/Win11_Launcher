@@ -9,6 +9,7 @@ import android.provider.Settings
 import com.siroha.feature.filemanager.FileEntry
 import com.siroha.feature.filemanager.FileManagerIcon
 import com.siroha.feature.filemanager.FileManagerRepository
+import com.siroha.feature.filemanager.FileProperties
 import com.siroha.feature.filemanager.QuickAccessEntry
 import com.siroha.feature.filemanager.StorageInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -88,6 +89,54 @@ class FileManagerRepositoryImpl @Inject constructor(
         val deleted = if (target.isDirectory) target.deleteRecursively() else target.delete()
         if (!deleted) error("Could not delete \"${target.name}\"")
     }
+
+    override suspend fun copy(sourcePath: String, destDirPath: String): Result<Unit> = runCatching {
+        val source = File(sourcePath)
+        val destDir = File(destDirPath)
+        if (!destDir.exists() || !destDir.isDirectory) error("Destination not found")
+
+        if (source.isDirectory) {
+            val destFolder = File(destDir, source.name)
+            destFolder.mkdirs()
+            source.copyRecursively(destFolder, overwrite = false)
+        } else {
+            val destFile = File(destDir, source.name)
+            source.copyTo(destFile, overwrite = false)
+        }
+    }
+
+    override suspend fun move(sourcePath: String, destDirPath: String): Result<Unit> = runCatching {
+        val source = File(sourcePath)
+        val destDir = File(destDirPath)
+        if (!destDir.exists() || !destDir.isDirectory) error("Destination not found")
+
+        val destFile = File(destDir, source.name)
+        if (!source.renameTo(destFile)) {
+            source.copyRecursively(destFile, overwrite = false)
+            source.deleteRecursively()
+        }
+    }
+
+    override suspend fun getFileProperties(path: String): FileProperties? = runCatching {
+        val file = File(path)
+        if (!file.exists()) return@runCatching null
+
+        val mimeType = if (file.isFile) {
+            android.webkit.MimeTypeMap.getSingleton()
+                .getMimeTypeFromExtension(file.extension.lowercase())
+        } else null
+
+        FileProperties(
+            name = file.name,
+            path = file.absolutePath,
+            type = if (file.isDirectory) "Folder" else (mimeType ?: "Unknown file"),
+            sizeBytes = if (file.isFile) file.length() else file.walkTopDown().filter { it.isFile }.sumOf { it.length() },
+            lastModified = file.lastModified(),
+            isHidden = file.isHidden,
+            isReadable = file.canRead(),
+            isWritable = file.canWrite()
+        )
+    }.getOrNull()
 
     override suspend fun getStorageInfo(): StorageInfo {
         val stat = StatFs(Environment.getExternalStorageDirectory().absolutePath)

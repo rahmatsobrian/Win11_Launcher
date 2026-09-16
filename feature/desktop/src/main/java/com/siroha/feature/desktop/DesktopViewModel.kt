@@ -45,26 +45,11 @@ class DesktopViewModel @Inject constructor(
         seedDesktopIfEmpty()
     }
 
-    /**
-     * A brand-new install has an empty Room table for desktop_items, which
-     * would otherwise render as a blank screen with no indication anything
-     * is wrong — there's no visible affordance yet pointing the user to
-     * "open the app drawer and long-press to add icons". Seeding a handful
-     * of already-installed apps on first run gives the user something to
-     * interact with immediately, matching how stock launchers ship with a
-     * pre-populated home screen out of the box.
-     */
     private fun seedDesktopIfEmpty() {
         viewModelScope.launch {
             val existingItems = desktopRepository.observeDesktopItems(0).first()
             if (existingItems.isNotEmpty()) return@launch
 
-            // MainActivity kicks off installedAppsRepository.refreshInstalledApps()
-            // on its own coroutine at the same time this ViewModel is created,
-            // so the very first Flow emission observed here can still be the
-            // pre-refresh empty list. Wait (bounded) for a non-empty emission
-            // instead of taking whatever arrives first, or seeding silently
-            // no-ops on a fresh install.
             val installedApps = try {
                 kotlinx.coroutines.withTimeout(5_000) {
                     installedAppsRepository.observeInstalledApps().first { it.isNotEmpty() }
@@ -100,8 +85,6 @@ class DesktopViewModel @Inject constructor(
     ) { page, items, pageCount, settings, editMode ->
         DesktopPartialState(page, items, pageCount, settings, editMode)
     }.combine(iconBitmaps) { partial, icons ->
-        partial to icons
-    }.combine(appLabels) { (partial, icons), labels ->
         loadMissingIconsAndLabels(partial.items)
 
         DesktopUiState(
@@ -116,7 +99,8 @@ class DesktopViewModel @Inject constructor(
             showLabels = partial.settings.desktop.showLabels,
             isLoading = false,
             iconBitmaps = icons,
-            appLabels = labels
+            appLabels = appLabels.value,
+            lockedApps = partial.settings.lockedApps
         )
     }.stateIn(
         scope = viewModelScope,
@@ -208,8 +192,28 @@ class DesktopViewModel @Inject constructor(
 
     fun addPage() {
         viewModelScope.launch {
-            val newPage = uiState.value.pageCount
-            currentPage.value = newPage
+            desktopRepository.addPage()
+            val newPageCount = desktopRepository.observePageCount().first()
+            currentPage.value = newPageCount - 1
+        }
+    }
+
+    fun removePage(page: Int) {
+        viewModelScope.launch {
+            if (desktopRepository.observePageCount().first() <= 1) return@launch
+            desktopRepository.removePage(page)
+            if (currentPage.value >= page && currentPage.value > 0) {
+                currentPage.value = currentPage.value - 1
+            }
+        }
+    }
+
+    fun toggleAppLock(componentKey: String) {
+        viewModelScope.launch {
+            settingsRepository.updateSettings { settings ->
+                val current = settings.lockedApps
+                settings.copy(lockedApps = if (componentKey in current) current - componentKey else current + componentKey)
+            }
         }
     }
 

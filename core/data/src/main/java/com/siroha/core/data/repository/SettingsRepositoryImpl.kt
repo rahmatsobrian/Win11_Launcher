@@ -8,11 +8,13 @@ import com.siroha.core.data.backup.SettingsBackup
 import com.siroha.core.database.dao.AppDao
 import com.siroha.core.datastore.PreferenceKeys
 import com.siroha.core.domain.model.DesktopSettings
+import com.siroha.core.domain.model.DeveloperSettings
 import com.siroha.core.domain.model.LauncherSettings
 import com.siroha.core.domain.model.StartMenuSettings
 import com.siroha.core.domain.model.TaskbarAlignment
 import com.siroha.core.domain.model.TaskbarSettings
 import com.siroha.core.domain.model.ThemeMode
+import com.siroha.core.domain.model.WallpaperMode
 import com.siroha.core.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -40,6 +42,22 @@ class SettingsRepositoryImpl @Inject constructor(
             animationsEnabled = prefs[PreferenceKeys.ANIMATIONS_ENABLED] ?: true,
             appLockEnabled = prefs[PreferenceKeys.APP_LOCK_ENABLED] ?: false,
             hiddenAppsEnabled = prefs[PreferenceKeys.HIDDEN_APPS_ENABLED] ?: true,
+            lockedApps = prefs[PreferenceKeys.LOCKED_APPS]
+                ?.split(",")
+                ?.filter { it.isNotBlank() }
+                ?.toSet()
+                ?: emptySet(),
+            fontSize = prefs[PreferenceKeys.FONT_SIZE] ?: 14,
+            wallpaperMode = prefs[PreferenceKeys.WALLPAPER_MODE]?.let {
+                runCatching { WallpaperMode.valueOf(it) }.getOrNull()
+            } ?: WallpaperMode.DEFAULT,
+            wallpaperUri = prefs[PreferenceKeys.WALLPAPER_URI],
+            developer = DeveloperSettings(
+                fpsCounterEnabled = prefs[PreferenceKeys.DEVELOPER_FPS_COUNTER] ?: false,
+                recompositionCounterEnabled = prefs[PreferenceKeys.DEVELOPER_RECOMPOSITION_COUNTER] ?: false,
+                layoutBoundariesEnabled = prefs[PreferenceKeys.DEVELOPER_LAYOUT_BOUNDARIES] ?: false,
+                benchmarksEnabled = prefs[PreferenceKeys.DEVELOPER_BENCHMARKS] ?: false
+            ),
             taskbar = TaskbarSettings(
                 alignment = prefs[PreferenceKeys.TASKBAR_ALIGNMENT]
                     ?.let { runCatching { TaskbarAlignment.valueOf(it) }.getOrNull() }
@@ -81,6 +99,16 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[PreferenceKeys.ANIMATIONS_ENABLED] = updated.animationsEnabled
             prefs[PreferenceKeys.APP_LOCK_ENABLED] = updated.appLockEnabled
             prefs[PreferenceKeys.HIDDEN_APPS_ENABLED] = updated.hiddenAppsEnabled
+            prefs[PreferenceKeys.LOCKED_APPS] = updated.lockedApps.joinToString(",")
+            prefs[PreferenceKeys.FONT_SIZE] = updated.fontSize
+            prefs[PreferenceKeys.WALLPAPER_MODE] = updated.wallpaperMode.name
+            updated.wallpaperUri?.let { prefs[PreferenceKeys.WALLPAPER_URI] = it }
+                ?: prefs.remove(PreferenceKeys.WALLPAPER_URI)
+
+            prefs[PreferenceKeys.DEVELOPER_FPS_COUNTER] = updated.developer.fpsCounterEnabled
+            prefs[PreferenceKeys.DEVELOPER_RECOMPOSITION_COUNTER] = updated.developer.recompositionCounterEnabled
+            prefs[PreferenceKeys.DEVELOPER_LAYOUT_BOUNDARIES] = updated.developer.layoutBoundariesEnabled
+            prefs[PreferenceKeys.DEVELOPER_BENCHMARKS] = updated.developer.benchmarksEnabled
 
             prefs[PreferenceKeys.TASKBAR_ALIGNMENT] = updated.taskbar.alignment.name
             prefs[PreferenceKeys.TASKBAR_HEIGHT_DP] = updated.taskbar.heightDp

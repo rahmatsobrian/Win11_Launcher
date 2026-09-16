@@ -7,11 +7,17 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -19,13 +25,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.siroha.feature.appdrawer.AppDrawerScreen
 import com.siroha.feature.desktop.DesktopScreen
 import com.siroha.feature.filemanager.FileManagerScreen
 import com.siroha.feature.settings.AboutScreen
 import com.siroha.feature.settings.DeveloperOptionsScreen
 import com.siroha.feature.settings.SettingsScreen
+import com.siroha.feature.settings.SettingsViewModel
 import com.siroha.feature.startmenu.StartMenuOverlay
 import com.siroha.feature.taskbar.TaskbarScreen
 import com.siroha.feature.taskbar.components.QuickSettingsOverlay
@@ -34,28 +43,12 @@ import com.siroha.feature.taskbar.system.SystemStatusProvider
 import com.siroha.win11launcher.core.AppLauncher
 import com.siroha.win11launcher.core.SystemControlHelper
 
-private enum class OverlayScreen { NONE, START_MENU, APP_DRAWER, SETTINGS, QUICK_SETTINGS, NOTIFICATION_CENTER, FILE_MANAGER, SETTINGS_ABOUT, SETTINGS_DEVELOPER }
+private enum class OverlayScreen { NONE, START_MENU, APP_DRAWER, SETTINGS, QUICK_SETTINGS, NOTIFICATION_CENTER, FILE_MANAGER, CALCULATOR, SETTINGS_ABOUT, SETTINGS_DEVELOPER }
 
-/** ComponentKey values reserved for launcher-internal screens (Settings,
- * File Explorer) that live inside this app rather than being separate
- * installed Android apps. These match the synthetic AppEntity rows seeded
- * by InstalledAppsRepositoryImpl (packageName="internal", using the same
- * componentKey format PackageManager-backed apps use: package/activity/user)
- * so they flow through pinning, search, and the app drawer identically to
- * real apps — they only get special-cased at the point of actually
- * launching them, here in openApp(). */
 private const val INTERNAL_SETTINGS = "internal/settings/0"
 private const val INTERNAL_FILE_MANAGER = "internal/filemanager/0"
+private const val INTERNAL_CALCULATOR = "internal/calculator/0"
 
-/**
- * The launcher root is not a conventional back-stack navigation graph:
- * Desktop + Taskbar are always-present layers (this *is* the home screen,
- * so there's no "previous screen" to navigate back to beneath them).
- * Every other screen is an overlay toggled by state rather than a pushed
- * route, which keeps the taskbar visible and interactive underneath them
- * exactly like Windows 11 — clicking the clock opens Quick Settings above
- * the taskbar, not a full navigation transition.
- */
 @Composable
 fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusProvider) {
     var overlay by remember { mutableStateOf(OverlayScreen.NONE) }
@@ -75,10 +68,33 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
             )
         )
 
+    val settingsViewModel: SettingsViewModel = hiltViewModel()
+    val settings by settingsViewModel.settings.collectAsState()
+
+    // Developer debug overlays
+    var lastFrameTimeNanos by remember { mutableLongStateOf(System.nanoTime()) }
+    var fps by remember { mutableIntStateOf(0) }
+    var recompositionCount by remember { mutableIntStateOf(0) }
+    val view = LocalView.current
+
+    // FPS counter and recomposition tracking
+    if (settings.developer.fpsCounterEnabled || settings.developer.benchmarksEnabled || settings.developer.recompositionCounterEnabled) {
+        androidx.compose.runtime.SideEffect {
+            recompositionCount++
+            val now = System.nanoTime()
+            val delta = now - lastFrameTimeNanos
+            if (delta > 0) {
+                fps = (1_000_000_000L / delta).toInt()
+            }
+            lastFrameTimeNanos = now
+        }
+    }
+
     fun openApp(componentKey: String) {
         when (componentKey) {
             INTERNAL_SETTINGS -> overlay = OverlayScreen.SETTINGS
             INTERNAL_FILE_MANAGER -> overlay = OverlayScreen.FILE_MANAGER
+            INTERNAL_CALCULATOR -> overlay = OverlayScreen.CALCULATOR
             else -> {
                 overlay = OverlayScreen.NONE
                 appLauncher.launch(context, componentKey, coroutineScope)
@@ -86,10 +102,6 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
         }
     }
 
-    // Only intercept back presses while an overlay is showing — with no
-    // overlay open, back should fall through to the system default (which
-    // for a HOME activity is a no-op, correctly keeping the user on the
-    // desktop rather than this composable trying to "close" the launcher).
     BackHandler(enabled = overlay != OverlayScreen.NONE) {
         overlay = when (overlay) {
             OverlayScreen.SETTINGS_ABOUT -> OverlayScreen.SETTINGS
@@ -99,6 +111,22 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // Enable Compose layout boundaries if the developer option is on
+        if (settings.developer.layoutBoundariesEnabled) {
+            val context = LocalContext.current
+            androidx.compose.runtime.DisposableEffect(Unit) {
+                // Enable layout bounds via system property for debugging
+                try {
+                    android.os.SystemProperties.set("debug.layout", "true")
+                } catch (_: Exception) { }
+                onDispose {
+                    try {
+                        android.os.SystemProperties.set("debug.layout", "false")
+                    } catch (_: Exception) { }
+                }
+            }
+        }
+
         DesktopScreen(
             onOpenApp = { componentKey -> openApp(componentKey) },
             onOpenStartMenu = { overlay = OverlayScreen.START_MENU }
@@ -157,7 +185,10 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
             enter = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
             exit = slideOutVertically(tween(180)) { it } + fadeOut(tween(180))
         ) {
-            DeveloperOptionsScreen(onNavigateBack = { overlay = OverlayScreen.SETTINGS })
+            DeveloperOptionsScreen(
+                onNavigateBack = { overlay = OverlayScreen.SETTINGS },
+                viewModel = settingsViewModel
+            )
         }
 
         AnimatedVisibility(
@@ -186,6 +217,16 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
             )
         }
 
+        AnimatedVisibility(
+            visible = overlay == OverlayScreen.CALCULATOR,
+            enter = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
+            exit = slideOutVertically(tween(180)) { it } + fadeOut(tween(180))
+        ) {
+            com.siroha.win11launcher.core.CalculatorScreen(
+                onDismiss = { overlay = OverlayScreen.NONE }
+            )
+        }
+
         QuickSettingsOverlay(
             isVisible = overlay == OverlayScreen.QUICK_SETTINGS,
             isWifiConnected = systemStatus.isWifiConnected,
@@ -208,5 +249,54 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
             isVisible = overlay == OverlayScreen.NOTIFICATION_CENTER,
             onDismiss = { overlay = OverlayScreen.NONE }
         )
+
+        // Developer Debug Overlays
+        if (settings.developer.fpsCounterEnabled) {
+            Text(
+                text = "FPS: $fps",
+                style = MaterialTheme.typography.labelMedium,
+                color = androidx.compose.ui.graphics.Color(0xFF00FF00),
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(8.dp)
+                    .background(
+                        color = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f),
+                        shape = MaterialTheme.shapes.small
+                    )
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            )
+        }
+
+        if (settings.developer.recompositionCounterEnabled) {
+            Text(
+                text = "Recomps: $recompositionCount",
+                style = MaterialTheme.typography.labelMedium,
+                color = androidx.compose.ui.graphics.Color(0xFF00BFFF),
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 8.dp, top = if (settings.developer.fpsCounterEnabled) 36.dp else 8.dp)
+                    .background(
+                        color = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f),
+                        shape = MaterialTheme.shapes.small
+                    )
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            )
+        }
+
+        if (settings.developer.benchmarksEnabled) {
+            Text(
+                text = "Render: ${if (fps > 0) "${1000 / fps}ms" else "N/A"} | FPS: $fps | Recomps: $recompositionCount",
+                style = MaterialTheme.typography.labelMedium,
+                color = androidx.compose.ui.graphics.Color(0xFFFFD700),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .background(
+                        color = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f),
+                        shape = MaterialTheme.shapes.small
+                    )
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            )
+        }
     }
 }

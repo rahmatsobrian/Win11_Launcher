@@ -32,6 +32,7 @@ dependencies {
     implementation(project(":core:designsystem"))
     implementation(project(":core:common"))
     implementation(project(":core:domain"))
+    implementation(project(":feature:search"))
 
     implementation(libs.core.ktx)
     implementation(libs.lifecycle.viewmodel.compose)
