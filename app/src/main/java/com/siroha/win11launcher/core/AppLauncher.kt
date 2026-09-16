@@ -43,7 +43,9 @@ class AppLauncher @Inject constructor(
                 val activity = context as? FragmentActivity
                 if (activity != null) {
                     showBiometricPrompt(activity) {
-                        launchAppUseCase(componentKey)
+                        scope.launch {
+                            launchAppUseCase(componentKey)
+                        }
                         launchIntent(context, app)
                     }
                 } else {

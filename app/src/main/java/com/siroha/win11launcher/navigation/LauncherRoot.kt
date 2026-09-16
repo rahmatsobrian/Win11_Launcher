@@ -115,15 +115,7 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
         if (settings.developer.layoutBoundariesEnabled) {
             val context = LocalContext.current
             androidx.compose.runtime.DisposableEffect(Unit) {
-                // Enable layout bounds via system property for debugging
-                try {
-                    android.os.SystemProperties.set("debug.layout", "true")
-                } catch (_: Exception) { }
-                onDispose {
-                    try {
-                        android.os.SystemProperties.set("debug.layout", "false")
-                    } catch (_: Exception) { }
-                }
+                onDispose { }
             }
         }
 
@@ -197,23 +189,7 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
             exit = slideOutVertically(tween(180)) { it } + fadeOut(tween(180))
         ) {
             FileManagerScreen(
-                onDismiss = { overlay = OverlayScreen.NONE },
-                onOpenFile = { filePath ->
-                    val file = java.io.File(filePath)
-                    val uri = androidx.core.content.FileProvider.getUriForFile(
-                        context,
-                        "${context.packageName}.fileprovider",
-                        file
-                    )
-                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
-                        setDataAndType(uri, context.contentResolver.getType(uri))
-                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    }
-                    runCatching {
-                        context.startActivity(intent)
-                    }
-                    overlay = OverlayScreen.NONE
-                }
+                onBack = { overlay = OverlayScreen.NONE }
             )
         }
 
