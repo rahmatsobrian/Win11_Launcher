@@ -60,7 +60,13 @@ class AppDrawerViewModel @Inject constructor(
         searchQuery,
         searchResults,
         settingsRepository.observeSettings()
-    ) { allApps, mostUsed, sort, query, results, settings ->
+    ) { values: Array<Any> ->
+        val allApps = values[0] as List<AppInfo>
+        val mostUsed = values[1] as List<AppInfo>
+        val sort = values[2] as AppDrawerSortMode
+        val query = values[3] as String
+        val results = values[4] as List<AppInfo>
+        val settings = values[5] as com.siroha.core.domain.model.LauncherSettings
         DrawerPartialState(allApps, mostUsed, sort, query, results, settings.lockedApps)
     }.combine(iconBitmaps) { partial, icons ->
         val sections = when (partial.sort) {
