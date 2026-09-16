@@ -50,7 +50,7 @@ class FileManagerViewModel @Inject constructor(
         showingProperties,
         propertiesEntry,
         propertiesInfo
-    ) { values ->
+    ) { values: Array<Any> ->
         @Suppress("UNCHECKED_CAST")
         val path = values[0] as String
         val allEntries = values[1] as List<FileEntry>
