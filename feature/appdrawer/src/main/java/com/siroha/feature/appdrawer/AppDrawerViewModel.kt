@@ -60,7 +60,7 @@ class AppDrawerViewModel @Inject constructor(
         searchQuery,
         searchResults,
         settingsRepository.observeSettings()
-    ) { values: Array<Any> ->
+    ) { values: Array<Any?> ->
         val allApps = values[0] as List<AppInfo>
         val mostUsed = values[1] as List<AppInfo>
         val sort = values[2] as AppDrawerSortMode

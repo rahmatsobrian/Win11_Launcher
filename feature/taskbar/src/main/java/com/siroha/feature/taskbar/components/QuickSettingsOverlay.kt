@@ -47,7 +47,6 @@ import androidx.compose.material.icons.filled.ModeNight
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Power
 import androidx.compose.material.icons.filled.ScreenRotation
-import androidx.compose.material.icons.filled.ScreenSearch
 import androidx.compose.material.icons.filled.SettingsBrightness
 import androidx.compose.material.icons.filled.VideoCameraFront
 import androidx.compose.material.icons.filled.Wifi
