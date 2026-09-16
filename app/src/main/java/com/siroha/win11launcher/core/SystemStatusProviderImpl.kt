@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -33,8 +34,9 @@ class SystemStatusProviderImpl @Inject constructor(
         observeClock(),
         observeBatteryStatus(),
         observeWifiConnectivity(),
-        observeBluetoothState()
-    ) { clock, battery, wifi, bluetooth ->
+        observeBluetoothState(),
+        observeNotificationCount()
+    ) { clock, battery, wifi, bluetooth, notificationCount ->
         SystemStatus(
             timeText = clock.first,
             dateText = clock.second,
@@ -42,7 +44,7 @@ class SystemStatusProviderImpl @Inject constructor(
             isCharging = battery.second,
             isWifiConnected = wifi,
             isBluetoothEnabled = bluetooth,
-            notificationCount = 0 // wired once NotificationListenerService access is granted by the user
+            notificationCount = notificationCount
         )
     }
 
@@ -124,4 +126,7 @@ class SystemStatusProviderImpl @Inject constructor(
         trySend(adapter.isEnabled)
         awaitClose { context.unregisterReceiver(receiver) }
     }
+
+    private fun observeNotificationCount(): Flow<Int> =
+        LauncherNotificationListenerService.notifications.map { it.size }
 }

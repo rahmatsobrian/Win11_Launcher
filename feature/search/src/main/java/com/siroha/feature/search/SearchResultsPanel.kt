@@ -21,6 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 fun SearchResultsPanel(
     onOpenApp: (String) -> Unit,
     onOpenSettingsRoute: (String) -> Unit,
+    onOpenContact: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
@@ -63,8 +64,7 @@ fun SearchResultsPanel(
             LazyColumn {
                 items(state.results.contacts, key = { it.id }) { result ->
                     ResultRow(title = result.title, subtitle = result.subtitle) {
-                        // Contact tap action (dial/open) is wired at the app-module
-                        // level since it requires an Intent + Activity context.
+                        onOpenContact(result.lookupKey)
                     }
                 }
             }

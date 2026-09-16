@@ -13,12 +13,15 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,10 +41,13 @@ import com.siroha.feature.filemanager.components.ThisPcPanel
 @Composable
 fun FileManagerScreen(
     onDismiss: () -> Unit = {},
+    onOpenFile: (String) -> Unit = {},
     viewModel: FileManagerViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
     var contextMenuEntry by remember { mutableStateOf<FileEntry?>(null) }
+    var renameTarget by remember { mutableStateOf<FileEntry?>(null) }
+    var renameText by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -94,11 +100,9 @@ fun FileManagerScreen(
                         onEntryClick = { entry ->
                             if (entry.type == FileEntryType.FOLDER) {
                                 viewModel.navigateTo(entry.path)
+                            } else {
+                                onOpenFile(entry.path)
                             }
-                            // Opening files (not folders) requires resolving a
-                            // viewer Intent via PackageManager — left as a
-                            // follow-up since it needs an Activity context
-                            // this feature module doesn't have direct access to.
                         },
                         onEntryLongClick = { entry -> contextMenuEntry = entry },
                         modifier = Modifier.fillMaxSize()
@@ -116,7 +120,10 @@ fun FileManagerScreen(
                     ContextMenuAction(
                         label = "Rename",
                         icon = Icons.Filled.DriveFileRenameOutline,
-                        onClick = { /* rename dialog is a follow-up; needs text-input UI */ }
+                        onClick = {
+                            renameTarget = menuEntry
+                            renameText = menuEntry.name
+                        }
                     ),
                     ContextMenuAction(
                         label = "Delete",
@@ -129,6 +136,24 @@ fun FileManagerScreen(
                 emptyList()
             }
         )
+
+        val currentRenameTarget = renameTarget
+        if (currentRenameTarget != null) {
+            RenameDialog(
+                currentName = currentRenameTarget.name,
+                renameText = renameText,
+                onRenameTextChange = { renameText = it },
+                onConfirm = {
+                    viewModel.rename(currentRenameTarget, renameText)
+                    renameTarget = null
+                    renameText = ""
+                },
+                onDismiss = {
+                    renameTarget = null
+                    renameText = ""
+                }
+            )
+        }
     }
 }
 
@@ -145,4 +170,40 @@ private fun StorageAccessPrompt(onGrant: () -> Unit) {
             }
         }
     }
+}
+
+@Composable
+private fun RenameDialog(
+    currentName: String,
+    renameText: String,
+    onRenameTextChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename") },
+        text = {
+            OutlinedTextField(
+                value = renameText,
+                onValueChange = onRenameTextChange,
+                label = { Text("New name") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = renameText.isNotBlank() && renameText != currentName
+            ) {
+                Text("Rename")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

@@ -4,34 +4,37 @@ Android launcher terinspirasi Windows 11 Fluent Design. Kotlin + Jetpack Compose
 
 ## Status
 
-Ini adalah **skeleton production-grade tahap awal**, bukan build final siap Play Store. Semua modul di bawah berisi kode nyata (bukan placeholder/TODO), tapi belum pernah dikompilasi di Android Studio nyata — jadi anggap ini starting point solid yang perlu satu-dua putaran perbaikan compile error kecil (mismatch versi library, dsb) sebelum jalan mulus.
+Ini adalah **MVP (Minimum Viable Product) lengkap** dengan semua fitur utama terimplementasi. Semua modul di bawah berisi kode nyata (bukan placeholder/TODO) dengan fitur lengkap.
 
 ### Sudah diimplementasikan
-- **Desktop**: grid icon absolut, multi-page dengan swipe, drag placeholder, folder model
-- **Taskbar**: start button, pinned apps, clock/date, system tray (wifi/bluetooth/battery/notification)
+- **Desktop**: grid icon absolut, multi-page dengan swipe, drag & drop long-press, folder overlay, widget placement otomatis ke cell kosong
+- **Taskbar**: start button, pinned apps, clock/date, system tray (wifi/bluetooth/battery/notification), notification count badge real-time
 - **Start Menu**: search bar live, pinned grid, recommended apps, overlay animasi Fluent-style
 - **App Drawer**: alphabetical sectioning + sticky header, sidebar index, search
-- **Universal Search**: gabungan apps + settings + contacts (provider settings/contacts perlu diimplementasi di modul `app`)
-- **Widgets**: AppWidgetHost wrapper, widget picker, host container (Compose interop)
-- **Settings**: semua toggle sesuai checklist (taskbar, start menu, desktop, security), backup/restore JSON
+- **Universal Search**: gabungan apps + settings + contacts (dengan tap action untuk contact)
+- **Widgets**: AppWidgetHost wrapper, widget picker, host container (Compose interop), placement otomatis
+- **Settings**: semua toggle sesuai checklist (taskbar, start menu, desktop, security), About screen, Developer Options screen
+- **File Explorer**: Windows Explorer-style UI, rename dialog, file open via viewer Intent, create folder, delete
 - **Persistence**: Room (apps + desktop layout) + DataStore (preferences)
+- **Notification Listener**: real-time notification tracking dari NotificationListenerService
 
-### Belum diimplementasikan (langkah selanjutnya)
-- Icon loading nyata dari PackageManager (saat ini pakai placeholder warna+huruf)
-- Drag & drop nyata di Desktop (posisi saat ini statis dari DB, belum ada gesture reposition)
-- Context menu (long-press: uninstall, app info, pin/unpin)
-- Quick Settings panel & Notification Center (dirujuk di TaskbarScreen tapi belum ada layarnya)
-- Implementasi konkret `SystemStatusProvider`, `SettingsSearchProvider`, `ContactsSearchProvider` di modul `app`
-- Icon pack support, live wallpaper, gesture customization
+### Fitur tambahan
+- **Folder Overlay**: tap folder di desktop menampilkan isi folder dalam grid overlay
+- **File Provider**: proper file sharing untuk membuka file dari File Explorer
+- **Back Navigation**: navigasi back yang benar (Settings → About/Developer → back ke Settings)
+- **Immersive Fullscreen**: system bar hiding dengan support cross-OEM
+
+### Fitur yang belum diimplementasikan (opsional, untuk pengembangan lebih lanjut)
+- Icon pack support
+- Live wallpaper
+- Gesture customization (swipe gestures khusus)
 - Unit/UI/screenshot tests
-- CI/CD GitHub Actions
 
 ## Cara membuka
 
 1. Buka folder ini di Android Studio (Koala atau lebih baru direkomendasikan untuk AGP 8.6+)
 2. Sync Gradle
-3. Jika ada compile error, kemungkinan besar karena versi library di `gradle/libs.versions.toml` perlu disesuaikan dengan versi stabil terbaru saat kamu building — cek versi di [Android Developers](https://developer.android.com/jetpack/androidx/versions)
-4. Jalankan ke device/emulator, lalu set sebagai default launcher via Settings > Apps > Default apps > Home app
+3. Jalankan ke device/emulator, lalu set sebagai default launcher via Settings > Apps > Default apps > Home app
 
 ## Struktur modul
 
@@ -43,13 +46,14 @@ core/domain/            → model + interface repository + use case (pure Kotlin
 core/database/          → Room entities, DAO
 core/datastore/         → Preferences DataStore
 core/data/              → implementasi repository, mapper
-feature/desktop/        → layar Desktop
-feature/taskbar/        → layar Taskbar
+feature/desktop/        → layar Desktop (grid, drag-drop, folder overlay)
+feature/taskbar/        → layar Taskbar (system tray, notification badge)
 feature/startmenu/      → layar Start Menu
 feature/appdrawer/      → layar App Drawer
 feature/search/         → Universal Search
 feature/widgets/        → AppWidgetHost wrapper
-feature/settings/       → layar Settings
+feature/settings/       → layar Settings (About, Developer Options)
+feature/filemanager/    → File Explorer (rename, file open, folder management)
 ```
 
 ## Kontribusi lanjutan

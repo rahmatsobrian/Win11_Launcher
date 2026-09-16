@@ -37,6 +37,7 @@ import com.siroha.core.domain.model.GridPosition
 import com.siroha.designsystem.components.AppContextMenu
 import com.siroha.designsystem.components.ContextMenuAction
 import com.siroha.feature.desktop.components.DesktopGrid
+import com.siroha.feature.desktop.components.FolderOverlay
 import com.siroha.feature.widgets.WidgetPickerOverlay
 
 @Composable
@@ -50,6 +51,7 @@ fun DesktopScreen(
     var contextMenuItem by remember { mutableStateOf<DesktopItem?>(null) }
     var isWidgetPickerVisible by remember { mutableStateOf(false) }
     var pendingWidget by remember { mutableStateOf<Pair<Int, AppWidgetProviderInfo>?>(null) }
+    var openFolder by remember { mutableStateOf<DesktopItem.Folder?>(null) }
 
     // Allocating an appWidgetId does not by itself grant this app
     // permission to bind that widget — AppWidgetManager requires either
@@ -98,7 +100,7 @@ fun DesktopScreen(
             appLabels = state.appLabels,
             isLayoutLocked = state.isLayoutLocked,
             widgetHost = viewModel.widgetHost,
-            onItemClick = { item -> handleItemClick(item, onOpenApp) },
+            onItemClick = { item -> handleItemClick(item, onOpenApp) { folder -> openFolder = folder } },
             onItemLongClick = { item -> contextMenuItem = item },
             onItemMoved = { itemId, newPosition -> viewModel.moveItem(itemId, newPosition) },
             modifier = Modifier.padding(bottom = 56.dp) // reserve space for taskbar
@@ -135,6 +137,21 @@ fun DesktopScreen(
                 onRemove = { id -> viewModel.removeItem(id) }
             )
         )
+
+        val currentFolder = openFolder
+        if (currentFolder != null) {
+            FolderOverlay(
+                folderName = currentFolder.name,
+                appComponentKeys = currentFolder.itemComponentKeys,
+                iconBitmaps = state.iconBitmaps,
+                appLabels = state.appLabels,
+                onAppClick = { componentKey ->
+                    openFolder = null
+                    onOpenApp(componentKey)
+                },
+                onDismiss = { openFolder = null }
+            )
+        }
 
         WidgetPickerOverlay(
             isVisible = isWidgetPickerVisible,
@@ -175,12 +192,38 @@ private fun completeWidgetPlacement(
 ) {
     val spanColumns = (providerInfo.minWidth / 100).coerceIn(1, state.gridColumns)
     val spanRows = (providerInfo.minHeight / 100).coerceIn(1, state.gridRows)
+    val position = findFirstAvailablePosition(state, spanColumns, spanRows)
     viewModel.addWidget(
         appWidgetId = appWidgetId,
         spanColumns = spanColumns,
         spanRows = spanRows,
-        position = GridPosition(page = state.currentPage, row = 0, column = 0)
+        position = position
     )
+}
+
+private fun findFirstAvailablePosition(
+    state: DesktopUiState,
+    spanColumns: Int,
+    spanRows: Int
+): GridPosition {
+    val occupied = state.items
+        .filter { it.position.page == state.currentPage }
+        .map { it.position.row to it.position.column }
+        .toSet()
+
+    for (row in 0..(state.gridRows - spanRows)) {
+        for (col in 0..(state.gridColumns - spanColumns)) {
+            val fits = (row until row + spanRows).all { r ->
+                (col until col + spanColumns).all { c ->
+                    (r to c) !in occupied
+                }
+            }
+            if (fits) {
+                return GridPosition(page = state.currentPage, row = row, column = col)
+            }
+        }
+    }
+    return GridPosition(page = state.currentPage, row = 0, column = 0)
 }
 
 private fun buildDesktopContextActions(
@@ -219,11 +262,15 @@ private fun buildDesktopContextActions(
     return actions
 }
 
-private fun handleItemClick(item: DesktopItem, onOpenApp: (String) -> Unit) {
+private fun handleItemClick(
+    item: DesktopItem,
+    onOpenApp: (String) -> Unit,
+    onOpenFolder: (DesktopItem.Folder) -> Unit
+) {
     when (item) {
         is DesktopItem.AppShortcut -> onOpenApp(item.appComponentKey)
-        is DesktopItem.Folder -> Unit // folder open state handled by a future FolderOverlay component
-        is DesktopItem.Widget -> Unit // widgets are interacted with directly, not "opened"
+        is DesktopItem.Folder -> onOpenFolder(item)
+        is DesktopItem.Widget -> Unit
     }
 }
 

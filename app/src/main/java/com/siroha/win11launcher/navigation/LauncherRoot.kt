@@ -23,6 +23,8 @@ import androidx.compose.runtime.collectAsState
 import com.siroha.feature.appdrawer.AppDrawerScreen
 import com.siroha.feature.desktop.DesktopScreen
 import com.siroha.feature.filemanager.FileManagerScreen
+import com.siroha.feature.settings.AboutScreen
+import com.siroha.feature.settings.DeveloperOptionsScreen
 import com.siroha.feature.settings.SettingsScreen
 import com.siroha.feature.startmenu.StartMenuOverlay
 import com.siroha.feature.taskbar.TaskbarScreen
@@ -32,7 +34,7 @@ import com.siroha.feature.taskbar.system.SystemStatusProvider
 import com.siroha.win11launcher.core.AppLauncher
 import com.siroha.win11launcher.core.SystemControlHelper
 
-private enum class OverlayScreen { NONE, START_MENU, APP_DRAWER, SETTINGS, QUICK_SETTINGS, NOTIFICATION_CENTER, FILE_MANAGER }
+private enum class OverlayScreen { NONE, START_MENU, APP_DRAWER, SETTINGS, QUICK_SETTINGS, NOTIFICATION_CENTER, FILE_MANAGER, SETTINGS_ABOUT, SETTINGS_DEVELOPER }
 
 /** ComponentKey values reserved for launcher-internal screens (Settings,
  * File Explorer) that live inside this app rather than being separate
@@ -89,7 +91,11 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
     // for a HOME activity is a no-op, correctly keeping the user on the
     // desktop rather than this composable trying to "close" the launcher).
     BackHandler(enabled = overlay != OverlayScreen.NONE) {
-        overlay = OverlayScreen.NONE
+        overlay = when (overlay) {
+            OverlayScreen.SETTINGS_ABOUT -> OverlayScreen.SETTINGS
+            OverlayScreen.SETTINGS_DEVELOPER -> OverlayScreen.SETTINGS
+            else -> OverlayScreen.NONE
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -133,9 +139,25 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
             exit = slideOutVertically(tween(180)) { it } + fadeOut(tween(180))
         ) {
             SettingsScreen(
-                onNavigateToAbout = { /* pushed as a nested overlay by feature:settings' own state */ },
-                onNavigateToDeveloperOptions = { /* same */ }
+                onNavigateToAbout = { overlay = OverlayScreen.SETTINGS_ABOUT },
+                onNavigateToDeveloperOptions = { overlay = OverlayScreen.SETTINGS_DEVELOPER }
             )
+        }
+
+        AnimatedVisibility(
+            visible = overlay == OverlayScreen.SETTINGS_ABOUT,
+            enter = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
+            exit = slideOutVertically(tween(180)) { it } + fadeOut(tween(180))
+        ) {
+            AboutScreen(onNavigateBack = { overlay = OverlayScreen.SETTINGS })
+        }
+
+        AnimatedVisibility(
+            visible = overlay == OverlayScreen.SETTINGS_DEVELOPER,
+            enter = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
+            exit = slideOutVertically(tween(180)) { it } + fadeOut(tween(180))
+        ) {
+            DeveloperOptionsScreen(onNavigateBack = { overlay = OverlayScreen.SETTINGS })
         }
 
         AnimatedVisibility(
@@ -143,7 +165,25 @@ fun LauncherRoot(appLauncher: AppLauncher, systemStatusProvider: SystemStatusPro
             enter = slideInVertically(tween(220)) { it } + fadeIn(tween(220)),
             exit = slideOutVertically(tween(180)) { it } + fadeOut(tween(180))
         ) {
-            FileManagerScreen(onDismiss = { overlay = OverlayScreen.NONE })
+            FileManagerScreen(
+                onDismiss = { overlay = OverlayScreen.NONE },
+                onOpenFile = { filePath ->
+                    val file = java.io.File(filePath)
+                    val uri = androidx.core.content.FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        file
+                    )
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, context.contentResolver.getType(uri))
+                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    runCatching {
+                        context.startActivity(intent)
+                    }
+                    overlay = OverlayScreen.NONE
+                }
+            )
         }
 
         QuickSettingsOverlay(
